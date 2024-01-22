@@ -1,7 +1,7 @@
 import os
 import time
 import pandas as pd
-import my_mae_utils as utils
+import Common.my_utils as utils
 import win32com.client as email_client
 
 
@@ -11,7 +11,7 @@ def main():
     SEND_EMAIL = False
 
     # Directory containing the CSV files
-    directory = r"C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Attendance\BSFiles"
+    directory = r"C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Grades\BSFiles"
 
     # List to store each DataFrame
     dfs = []
@@ -25,26 +25,28 @@ def main():
             # Read the CSV file
             df = pd.read_csv(file_path)
             # Check if required columns exist
-            if all(col in df.columns for col in ['Org Defined ID', 'First Name', 'Last Name']):
+            if all(col in df.columns for col in ['OrgDefinedId', 'First Name', 'Last Name']):
                 df["File Name"] = filename
                 # Append the required columns to the list
-                dfs.append(df[['Org Defined ID', 'First Name', 'Last Name', "File Name"]])
+                dfs.append(df[['OrgDefinedId', 'First Name', 'Last Name', "File Name"]])
 
     # Concatenate all DataFrames in the list
     combined_df = pd.concat(dfs, ignore_index=True)
 
-    # Find duplicates based on 'Org Defined ID'
-    duplicates = combined_df[combined_df.duplicated(subset='Org Defined ID', keep=False)]
+    # Find duplicates based on 'OrgDefinedId'
+    duplicates = combined_df[combined_df.duplicated(subset='OrgDefinedId', keep=False)]
 
-    # Sort the DataFrame based on 'Org Defined ID'
-    sorted_duplicates = duplicates.sort_values(by='Org Defined ID')
+    # Sort the DataFrame based on 'OrgDefinedId'
+    sorted_duplicates = duplicates.sort_values(by='OrgDefinedId')
+
 
     if not sorted_duplicates.empty:
-        # Print the non-unique elements sorted by 'Org Defined ID', without the index
-        print("Non-unique elements sorted by 'Org Defined ID':")
+        # Print the non-unique elements sorted by 'OrgDefinedId', without the index
+        print("Non-unique elements sorted by 'OrgDefinedId':")
         print(sorted_duplicates.to_string(index=False))
         
         df_string = sorted_duplicates.to_html(index=False)
+
         if SEND_EMAIL:
             if TESTING: 
                 to="rkhuwaja@spiritofmath.com"
@@ -59,9 +61,8 @@ def main():
             utils.send_email(to, cc, subject, body)
         return False
     else: 
-        print("No duplicates found in Brightspace classes - checked via Attendance")
-        return True
-
+        print("No duplicates found in Brightspace classes - checked via Grades")
+        return False
 
 if __name__ == "__main__":
     main()

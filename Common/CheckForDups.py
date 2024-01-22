@@ -1,9 +1,9 @@
 import pandas as pd
-import my_mae_utils as utils
-import MAE_CheckClassMap as check1
-import MAE_DupStudentsInBSViaClassList as check2
-import MAE_DupStudentsInBSViaAttendance as check3
-import MAE_DupStudentsInBSViaGrades as check4
+import Common.my_utils as utils
+import Common.CheckClassMap as check1
+import Common.DupStudentsInBSViaClassList as check2
+import Common.DupStudentsInBSViaAttendance as check3
+import Common.DupStudentsInBSViaGrades as check4
 
 def main():
     # Path where ClassMap file is stored
