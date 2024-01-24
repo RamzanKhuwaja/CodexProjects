@@ -9,35 +9,65 @@ from datetime import datetime
 import win32com.client as email_client
 from datetime import datetime, timedelta
 
-CAMPUS = "MAE"
-to_email = cc_email = ""
+CAMPUS = to_email = cc_email = ""
 # Path where ClassMap file is stored
-CLASS_MAP_FILE  = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\MAE\MAEClassMap2023-24.csv'
+VAU_CLASS_MAP_FILE  = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automation\Common\VAUClassMap2023-24.csv'
 # Path where StudentMap file is stored
-STUDENT_MAP_FILE = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\MAE\MAEStudentMap2023-24.csv'
+VAU_STUDENT_MAP_FILE = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\MAE\MAEStudentMap2023-24.csv'
 
 # Directory containing the CSV files for Attendance
-ATTENDANCE_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Attendance\BSFiles'
+VAU_ATTENDANCE_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Attendance\BSFiles'
 # Dir where Brightspace Class List downloaded files are stored
-CLASS_LIST_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\BSLogin'
+VAU_CLASS_LIST_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\BSLogin'
 # Directory containing the CSV files for Grades
-GRADES_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Grades\BSFiles'
+VAU_GRADES_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Grades\BSFiles'
 # Path where PDF files are stored
-MAEPDFdirectory = r"C:\Users\ramza\Dropbox\MAE Share\Automation\Ready For Printing"
+VAU_PDFdirectory = r"C:\Users\ramza\Dropbox\MAE Share\Automation\Ready For Printing"
 
 # Ensure the directory exists else create one
 #os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-def set_campus_info():
+def set_campus_info(campus_code):
     global CAMPUS, to_email, cc_email
-    if CAMPUS == "VAU":
+    if campus_code == "VAU":
         to_email = "rkhuwaja@spiritofmath.com"
         cc_email = "vaughan@spiritofmath.com"
-    elif CAMPUS == "MAE":
+        CAMPUS = campus_code
+    elif campus_code == "MAE":
         to_email = "rkhuwaja@spiritofmath.com"
         cc_email = "markhameast@spiritofmath.com"
+        CAMPUS = campus_code
     else:
-        print("Invalid campus")
+        print("ERROR: Invalid campus code")
+
+def check_duplicates_in_column(df, column_name):
+    duplicates = df[df.duplicated(column_name, keep=False)]
+    if not duplicates.empty:
+        print(f"Duplicate entries found in '{column_name}':")
+        for index, row in duplicates.iterrows():
+            print(f"Row {index + 2}: {row[column_name]}")
+        print()
+    else:
+        print(f"No duplicates found in '{column_name}'.")
+
+def check_class_map (ClassMap):
+    try:
+        df = pd.read_csv(ClassMap)
+
+        columns_to_check = ['Class Code', 'Attendance', 'Grades', 'ClassList']
+        for column in columns_to_check:
+            if column in df.columns:
+                check_duplicates_in_column(df, column)
+            else:
+                print(f"Column '{column}' not found in the CSV file.")
+        return True
+
+    except FileNotFoundError:
+        print(f"File not found: {ClassMap}")
+        return False
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
 
 
 # Function to strip leading '#' or '#0' from a string
