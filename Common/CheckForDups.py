@@ -1,7 +1,7 @@
 import pandas as pd
 import Common.my_utils as utils
 import VAU.VAUCheckClassMap as check1
-import Common.DupStudentsInBSViaClassList as check2
+import VAU.VAUDupStudentsInBSViaClassList as check2
 import Common.DupStudentsInBSViaAttendance as check3
 import Common.DupStudentsInBSViaGrades as check4
 
