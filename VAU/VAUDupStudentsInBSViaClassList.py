@@ -8,8 +8,10 @@ def main():
     
     if utils.FindDupStudentsInBSViaClassList (utils.VAU_CLASS_LIST_DIR):
         print("Exiting Check on FindDupStudentsIn VAU BSViaClassList.")
+        return True
     else:
         print("WARNING: Exiting Check on FindDupStudentsIn VAU BSViaClassList.")
+        return False
 
 
 if __name__ == "__main__":

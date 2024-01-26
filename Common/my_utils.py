@@ -22,14 +22,16 @@ MAE_CLASS_MAP_FILE  = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automatio
 VAU_STUDENT_MAP_FILE = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\MAE\MAEStudentMap2023-24.csv'
 
 # Directory containing the CSV files for Attendance
-VAU_ATTENDANCE_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Attendance\BSFiles'
+VAU_ATTENDANCE_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\VAU\Attendance\BSFiles'
+MAE_ATTENDANCE_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Attendance\BSFiles'
 
 # Dir where Brightspace Class List (HTML files)downloaded files are stored
 VAU_CLASS_LIST_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\VAU\BSLogin'
 MAE_CLASS_LIST_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\BSLogin'
 
 # Directory containing the CSV files for Grades
-VAU_GRADES_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Grades\BSFiles'
+VAU_GRADES_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\VAU\Grades\BSFiles'
+MAE_GRADES_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Grades\BSFiles'
 
 # Path where PDF files are stored
 VAU_PDFdirectory = r"C:\Users\ramza\Dropbox\MAE Share\Automation\Ready For Printing"
@@ -486,20 +488,68 @@ def FindDupStudentsInBSViaClassList (BSdirectory):
         # Print the non-unique elements sorted by 'Org Defined ID', without the index
         print("Non-unique elements sorted by 'Org Defined ID':")
         print(sorted_duplicates.to_string(index=False))
-        if SEND_EMAIL: 
+        if SEND_EMAIL:
             if TESTING: 
-                to="rkhuwaja@spiritofmath.com"
-            else:
-                cc="vaughan@spiritofmath.com"
+                cc_email = to_email
 
-            subject="Please check and remove duplicates in Brightspace classes"
-            body="Hello Office, <br><br>" + \
+            subject_email="Please check and remove duplicates in Brightspace classes"
+            body_email="Hello Office, <br><br>" + \
                 "I ran a script today, and the following students are registered in one or more classes in BrightSpace (BS). Please check BS (Classlists) and remove duplicates. Thank you.<br><br>" \
                     + df_string + "<br><br>Sincerely, <br>Ramzan Khuwaja"
 
-            send_email(to, cc, subject, body)
+            send_email(to_email, cc_email, subject_email, body_email)
 
         return False
     else: 
         print("No duplicates found in Brightspace classes - checked via Class Lists")
+        return True
+
+
+def FindDupStudentsInBSViaAttendanceGrades (AttedanceDir, column_name): 
+    # List to store each DataFrame
+    dfs = []
+
+    # Loop through each file in the directory
+    for filename in os.listdir(AttedanceDir):
+        if filename.endswith('.csv'):
+            file_path = os.path.join(AttedanceDir, filename)
+            # Read the CSV file
+            df = pd.read_csv(file_path)
+            # Check if required columns exist
+            if all(col in df.columns for col in [column_name, 'First Name', 'Last Name']):
+                df["File Name"] = filename
+                # Append the required columns to the list
+                dfs.append(df[[column_name, 'First Name', 'Last Name', "File Name"]])
+
+    # Concatenate all DataFrames in the list
+    combined_df = pd.concat(dfs, ignore_index=True)
+    #print(combined_df.head)
+
+    # Find duplicates based on column_name
+    duplicates = combined_df[combined_df.duplicated(subset=column_name, keep=False)]
+
+    # Sort the DataFrame based on column_name
+    sorted_duplicates = duplicates.sort_values(by=column_name)
+    #print(sorted_duplicates.to_string(index=False))
+
+    if not sorted_duplicates.empty:
+        # Print the non-unique elements sorted by column_name, without the index
+        print("Non-unique elements sorted by " + column_name + ": ")
+        print(sorted_duplicates.to_string(index=False))
+        
+        df_string = sorted_duplicates.to_html(index=False)
+        if SEND_EMAIL:
+            if TESTING: 
+                cc_email = to_email
+
+            subject_email="Please check and remove duplicates in Brightspace classes"
+            body_email="Hello Office, <br><br>" + \
+                "I ran a script today, and the following students are registered in one or more classes in BrightSpace. Please check and remove duplicates. Thank you.<br><br>" \
+                    + df_string + "<br><br>Sincerely, <br>Ramzan Khuwaja"
+
+            send_email(to_email, cc_email, subject_email, body_email)
+        return False
+    else: 
+        #print(sorted_duplicates.to_string(index=False))
+        print("No duplicates found in Brightspace classes - checked via Attendance or Grades")
         return True
