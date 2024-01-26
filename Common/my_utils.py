@@ -505,14 +505,14 @@ def FindDupStudentsInBSViaClassList (BSdirectory):
         return True
 
 
-def FindDupStudentsInBSViaAttendanceGrades (AttedanceDir, column_name): 
+def FindDupStudentsInBSViaAttendanceGrades (target_dir, column_name): 
     # List to store each DataFrame
     dfs = []
 
     # Loop through each file in the directory
-    for filename in os.listdir(AttedanceDir):
+    for filename in os.listdir(target_dir):
         if filename.endswith('.csv'):
-            file_path = os.path.join(AttedanceDir, filename)
+            file_path = os.path.join(target_dir, filename)
             # Read the CSV file
             df = pd.read_csv(file_path)
             # Check if required columns exist
@@ -523,7 +523,7 @@ def FindDupStudentsInBSViaAttendanceGrades (AttedanceDir, column_name):
 
     # Concatenate all DataFrames in the list
     combined_df = pd.concat(dfs, ignore_index=True)
-    #print(combined_df.head)
+    #print(combined_df)
 
     # Find duplicates based on column_name
     duplicates = combined_df[combined_df.duplicated(subset=column_name, keep=False)]
