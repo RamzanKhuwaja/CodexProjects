@@ -372,7 +372,17 @@ def get_grades_data(grades_dir):
                     # Renaming the column
                     #print(filename)
 
-                    grades_df_temp.rename(columns={'Enrolment Start Week Points Grade <Numeric MaxPoints:39>': 'Start Week'}, inplace=True)
+                    # Find the column that starts with or contains the specified substring
+                    column_to_rename = [col for col in grades_df_temp.columns if "Enrolment Start Week Points Grade" in col]
+
+                    # Check if the column exists and rename it
+                    if column_to_rename:
+                        # Only take the first matching column if there are multiple
+                        grades_df_temp.rename(columns={column_to_rename[0]: 'Start Week'}, inplace=True)
+                    else:
+                        print("ERROR: No column found with the specified substring: Enrolment Start Week Points Grade: " + filename)
+
+                    #grades_df_temp.rename(columns={'Enrolment Start Week Points Grade <Numeric MaxPoints:39>': 'Start Week'}, inplace=True)
                     #print(grades_df_temp.dtypes)
                     # Calculate the final grade
                     grades_df_temp['Final Grade'] = float64(grades_df_temp.apply(calculate_final_grade, axis=1))
@@ -664,7 +674,7 @@ def GenerateStudentMap(campus):
         for index, row in StudentMap.iterrows():
             student_id = row['Org Defined ID']
             
-            # Check if student_id exists in AttandanceData
+            # Check if student_id exists in GradesData
             if student_id in GradesData['OrgDefinedId'].values:
                 matching_row = GradesData[GradesData['OrgDefinedId'] == student_id].iloc[0]
                 
