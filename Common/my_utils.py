@@ -1,13 +1,13 @@
 import os
 import re
 import time
-from numpy import float64, int64
 import pdfkit
 import pandas as pd
 from bs4 import BeautifulSoup
-from datetime import datetime
+from numpy import float64, int64
 import win32com.client as email_client
 from datetime import datetime, timedelta
+
 
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
@@ -19,7 +19,8 @@ VAU_CLASS_MAP_FILE  = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automatio
 MAE_CLASS_MAP_FILE  = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automation\Common\MAEClassMap2023-24.csv'
 
 # Path where StudentMap file is stored
-VAU_STUDENT_MAP_FILE = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\MAE\MAEStudentMap2023-24.csv'
+VAU_STUDENT_MAP_FILE = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automation\Common\VAUStudentMap2023-24.csv'
+MAE_STUDENT_MAP_FILE = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automation\Common\MAEStudentMap2023-24.csv'
 
 # Directory containing the CSV files for Attendance
 VAU_ATTENDANCE_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\VAU\Attendance\BSFiles'
@@ -270,9 +271,9 @@ def calculate_final_grade(row):
 
 # Read each HTML file in this directory using pandas library
 
-def add_class_list_data(master_df):
-    os.chdir(CLASS_LIST_DIR)
-    for filename in os.listdir(CLASS_LIST_DIR):
+def add_class_list_data(master_df, class_list_dir_path):
+    os.chdir(class_list_dir_path)
+    for filename in os.listdir(class_list_dir_path):
         if filename.endswith(".htm"):
             # Read the HTML file
             tables = pd.read_html(filename)
@@ -335,12 +336,12 @@ def add_class_list_data(master_df):
 
 
 # Read each CSV file in Attendance directory using pandas library
-def get_attendance_data():
+def get_attendance_data(attendance_dir):
     attendance_df = pd.DataFrame()
 
-    os.chdir(ATTENDANCE_DIR)
+    os.chdir(attendance_dir)
 
-    for filename in os.listdir(ATTENDANCE_DIR):
+    for filename in os.listdir(attendance_dir):
 
         if filename.endswith(".csv"):
             attendance_df = pd.concat([attendance_df, pd.read_csv(filename)], axis=0)
@@ -353,65 +354,74 @@ def get_attendance_data():
 
 
 # Read each CSV file in Grades directory using pandas library
-def get_grades_data():
+def get_grades_data(grades_dir):
     grades_df = pd.DataFrame()
-
-    os.chdir(GRADES_DIR)
-    for filename in os.listdir(GRADES_DIR):
+    os.chdir(grades_dir)
+    for filename in os.listdir(grades_dir):
         if filename.endswith(".csv"):
             grades_df_temp = pd.read_csv(filename)
-            # Renaming the column
-            #print(filename)
-            grades_df_temp.rename(columns={'Enrolment Start Week Points Grade <Numeric MaxPoints:39>': 'Start Week'}, inplace=True)
-            #print(grades_df_temp.dtypes)
-            # Calculate the final grade
-            grades_df_temp['Final Grade'] = float64(grades_df_temp.apply(calculate_final_grade, axis=1))
 
-            # Apply the function to the 'OrgDefinedId' column
-            grades_df_temp['OrgDefinedId'] = int64(grades_df_temp['OrgDefinedId'].apply(strip_hash))
-
-            # Find column names that contain 'Start Week'
-            matching_columns = [col for col in grades_df_temp.columns if 'Start Week' in col]
-
-            # # Select the column if one matching column is found
-            # if len(matching_columns) == 1:
-            #     grades_df_temp['Start Week'] = int64(grades_df_temp[matching_columns[0]])
-            # elif len(matching_columns) > 1:
-            #     print("ERROR: Multiple columns found containing 'Start Week':", matching_columns)
-            # else:
-            #     print("ERROR: No column found with 'Start Week' in its name" + filename)
-
-            # Select the column if one matching column is found
-
-            # Check if 'Start Week' column already exists
-            if 'Start Week' not in grades_df_temp.columns:
-                # If it doesn't exist, create it with default value -1
-                grades_df_temp['Start Week'] = -1
+            # Check if the DataFrame is empty
+            if grades_df_temp.empty:
+                print("ERROR: The file is empty: " + filename)
             else:
-                # If it exists, proceed with your existing logic
-                if len(matching_columns) == 1:
-                    # Replace NaN with a placeholder, e.g., -1, then convert to int64
-                    grades_df_temp[matching_columns[0]] = grades_df_temp[matching_columns[0]].fillna(-1).astype('int64')
-
-                    grades_df_temp['Start Week'] = grades_df_temp[matching_columns[0]].astype('int64')
-                elif len(matching_columns) > 1:
-                    print("WARNING: Multiple columns found containing 'Start Week':", matching_columns)
-                    # Replace NaN with a placeholder, e.g., -1, then convert to int64
-                    grades_df_temp[matching_columns[0]] = grades_df_temp[matching_columns[0]].fillna(-1).astype('int64')
-
-                    grades_df_temp['Start Week'] = grades_df_temp[matching_columns[0]].astype('int64')
+                # Check for rows containing only "End-of-Line Indicator"
+                if (grades_df_temp.shape[1] == 1) and all(grades_df_temp.iloc[:, 0] == "End-of-Line Indicator"):
+                    print("ERROR: The file contains only 'End-of-Line Indicator' word: " + filename)
                 else:
-                    # This block will now only execute if 'Start Week' exists but no matching columns are found
-                    print("ERROR: No column found with 'Start Week' in its name in " + filename)
+                    # Renaming the column
+                    #print(filename)
 
+                    grades_df_temp.rename(columns={'Enrolment Start Week Points Grade <Numeric MaxPoints:39>': 'Start Week'}, inplace=True)
+                    #print(grades_df_temp.dtypes)
+                    # Calculate the final grade
+                    grades_df_temp['Final Grade'] = float64(grades_df_temp.apply(calculate_final_grade, axis=1))
 
-            #grades_df_temp['Start Week'] = int64(grades_df_temp['Start Week'])
-            grades_df = pd.concat([grades_df, grades_df_temp], axis=0)
+                    # Apply the function to the 'OrgDefinedId' column
+                    grades_df_temp['OrgDefinedId'] = int64(grades_df_temp['OrgDefinedId'].apply(strip_hash))
+
+                    # Find column names that contain 'Start Week'
+                    matching_columns = [col for col in grades_df_temp.columns if 'Start Week' in col]
+
+                    # # Select the column if one matching column is found
+                    # if len(matching_columns) == 1:
+                    #     grades_df_temp['Start Week'] = int64(grades_df_temp[matching_columns[0]])
+                    # elif len(matching_columns) > 1:
+                    #     print("ERROR: Multiple columns found containing 'Start Week':", matching_columns)
+                    # else:
+                    #     print("ERROR: No column found with 'Start Week' in its name" + filename)
+
+                    # Select the column if one matching column is found
+
+                    # Check if 'Start Week' column already exists
+                    if 'Start Week' not in grades_df_temp.columns:
+                        # If it doesn't exist, create it with default value -1
+                        grades_df_temp['Start Week'] = -1
+                    else:
+                        # If it exists, proceed with your existing logic
+                        if len(matching_columns) == 1:
+                            # Replace NaN with a placeholder, e.g., -1, then convert to int64
+                            grades_df_temp[matching_columns[0]] = grades_df_temp[matching_columns[0]].fillna(-1).astype('int64')
+
+                            grades_df_temp['Start Week'] = grades_df_temp[matching_columns[0]].astype('int64')
+                        elif len(matching_columns) > 1:
+                            print("WARNING: Multiple columns found containing 'Start Week':", matching_columns)
+                            # Replace NaN with a placeholder, e.g., -1, then convert to int64
+                            grades_df_temp[matching_columns[0]] = grades_df_temp[matching_columns[0]].fillna(-1).astype('int64')
+
+                            grades_df_temp['Start Week'] = grades_df_temp[matching_columns[0]].astype('int64')
+                        else:
+                            # This block will now only execute if 'Start Week' exists but no matching columns are found
+                            print("ERROR: No column found with 'Start Week' in its name in " + filename)
+
+                    #grades_df_temp['Start Week'] = int64(grades_df_temp['Start Week'])
+                    grades_df = pd.concat([grades_df, grades_df_temp], axis=0)
         else: 
             print("WARNING: This is not a CSV file: " + filename)
 
     grades_df = grades_df.reset_index(drop=True)
     return grades_df
+
 
 def FindDupStudentsInBSViaClassList (BSdirectory): 
 
@@ -553,3 +563,135 @@ def FindDupStudentsInBSViaAttendanceGrades (target_dir, column_name):
         #print(sorted_duplicates.to_string(index=False))
         print("No duplicates found in Brightspace classes - checked via Attendance or Grades")
         return True
+    
+def GenerateStudentMap(campus):
+
+    if campus == "VAU":
+        class_list_dir_path = VAU_CLASS_LIST_DIR
+        class_map_file = VAU_CLASS_MAP_FILE
+        attendance_dir = VAU_ATTENDANCE_DIR
+        grades_dir = VAU_GRADES_DIR
+        student_map_file = VAU_STUDENT_MAP_FILE
+    elif campus == "MAE":
+        class_list_dir_path = MAE_CLASS_LIST_DIR
+        class_map_file = MAE_CLASS_MAP_FILE
+        attendance_dir = MAE_ATTENDANCE_DIR
+        grades_dir = MAE_GRADES_DIR
+        student_map_file = MAE_STUDENT_MAP_FILE
+    else: 
+        print("ERROR: Invalid campus name")
+        return False
+
+    # Set the maximum number of columns to display without truncation
+    pd.set_option('display.max_columns', None)
+    
+    #create a dataframe - StudentMap
+    columns = ['Org Defined ID', 'Student Full Name', 'Last Accessed', 'Class Code', 'Teacher Full Name', 'Teacher Email', 'Teacher Group', 'Attendance (%)', 'Parent Email', 'Start Week', 'Final Grade']
+    StudentMap = pd.DataFrame(columns=columns)
+
+    # Specify data types for each column after creating the DataFrame
+    column_types = {
+        'Org Defined ID': int64,
+        'Student Full Name': object,
+        'Last Accessed': object,
+        'Class Code': object,
+        'Teacher Full Name': object,
+        'Teacher Email': object,
+        'Teacher Group': object,
+        'Attendance (%)': object,
+        'Parent Email': object,
+        'Start Week': int64,
+        'Final Grade': float64
+    }
+    StudentMap = StudentMap.astype(column_types)
+
+    StudentMap = add_class_list_data(StudentMap, class_list_dir_path)
+    #print(StudentMap)
+
+    ClassMap = pd.read_csv(class_map_file)
+
+    print("Start - Copying StudentMap data")
+ 
+    #Copy Data from ClassMap to  StudentMap
+    for index, row in StudentMap.iterrows():
+        class_code = row['Class Code']
+        matching_row = None
+        
+        # Check if class_code exists in ClassMap
+        if class_code in ClassMap['Class Code'].values:
+            matching_row = ClassMap[ClassMap['Class Code'] == class_code].iloc[0]
+            #print(matching_row.dtype)
+            
+            # Copy data from df1 to df_master
+            f_name = matching_row['Teacher Full Name']
+            #print(f_name)
+            #print(index)
+            StudentMap.at[index, 'Teacher Full Name'] = f_name
+            StudentMap.at[index, 'Teacher Email'] = matching_row['Teacher Email']
+            StudentMap.at[index, 'Teacher Group'] = matching_row['Teacher Group']
+
+    print("End - Copying StudentMap data")
+
+    print("Start - Copying Attandance data")
+
+    #Get Attandance Data dataframe
+    AttandanceData = get_attendance_data(attendance_dir)
+    
+    #Copy Attandance Data to  StudentMap
+    for index, row in StudentMap.iterrows():
+        student_id = row['Org Defined ID']
+        
+        # Check if student_id exists in AttandanceData
+        # if student_id in AttandanceData['Org Defined ID'].values:
+        if AttandanceData['Org Defined ID'].isin([student_id]).any():
+            matching_row = AttandanceData[AttandanceData['Org Defined ID'] == student_id].iloc[0]
+            
+            # Copy data from AttandanceData to df_master
+            StudentMap.at[index, 'Attendance (%)'] = matching_row['% Attendance']
+
+    print("End - Copying Attandance data")
+
+    print("Start - Copying Grade data")
+
+    #Get Grade Data dataframe
+    GradesData = get_grades_data(grades_dir)
+    #print(GradesData)
+
+    if GradesData.empty:
+        print("ERROR: GradesData is empty")
+    else:
+        # #Copy Grades Data to  StudentMap
+        for index, row in StudentMap.iterrows():
+            student_id = row['Org Defined ID']
+            
+            # Check if student_id exists in AttandanceData
+            if student_id in GradesData['OrgDefinedId'].values:
+                matching_row = GradesData[GradesData['OrgDefinedId'] == student_id].iloc[0]
+                
+                # Copy data from GradesData to df_master
+                StudentMap.at[index, 'Parent Email'] = matching_row['Email']
+                StudentMap.at[index, 'Final Grade'] = matching_row['Final Grade']
+                # if Start Week is NaN then assign -1
+                if pd.isnull(matching_row['Start Week']):
+                    StudentMap.at[index, 'Start Week'] = -1
+                else:
+                    StudentMap.at[index, 'Start Week'] = matching_row['Start Week']
+            else:
+                print("ERROR: Student ID not found in GradesData: " + str(student_id))
+            
+    print("End - Copying Grade data")
+
+    #save datafrane - StudentMap
+    StudentMap.to_csv(student_map_file, index=False)
+    #print("StudentMap saved to " + utils.STUDENT_MAP_FILE)
+
+    # Find and print rows with empty cells
+    empty_rows = StudentMap[StudentMap.isnull().any(axis=1)]
+    if empty_rows.empty:
+        print("Good: No empty cells found in StudentMap!")
+        return True
+    else:
+        print("StudentMap rows with empty cells:")
+        print(empty_rows)  
+        return False 
+    
