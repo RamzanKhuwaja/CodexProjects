@@ -13,6 +13,7 @@ CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
 TESTING = False
 SEND_EMAIL = False
+THIS_WEEK_NUM = 20 #  <======  Change this every week!
 
 # Path where ClassMap file is stored
 VAU_CLASS_MAP_FILE  = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automation\Common\VAUClassMap2023-24.csv'
@@ -349,6 +350,10 @@ def get_attendance_data(attendance_dir):
             print("WARNING: This is not a CSV file: " + filename)
 
     attendance_df = attendance_df.reset_index(drop=True)
+
+    # Clean each cell that has "-" to a blank
+    attendance_df.replace("-", None, inplace=True)
+    
     return attendance_df
 
 
@@ -596,7 +601,7 @@ def GenerateStudentMap(campus):
     pd.set_option('display.max_columns', None)
     
     #create a dataframe - StudentMap
-    columns = ['Org Defined ID', 'Student Full Name', 'Last Accessed', 'Class Code', 'Teacher Full Name', 'Teacher Email', 'Teacher Group', 'Attendance (%)', 'Parent Email', 'Start Week', 'Final Grade']
+    columns = ['Org Defined ID', 'Student Full Name', 'Last Accessed', 'Class Code', 'Teacher Full Name', 'Teacher Email', 'Teacher Group', 'Attendance (%)', 'Parent Email', 'Start Week', 'Final Grade', 'Att Uptodate?']
     StudentMap = pd.DataFrame(columns=columns)
 
     # Specify data types for each column after creating the DataFrame
@@ -611,7 +616,8 @@ def GenerateStudentMap(campus):
         'Attendance (%)': object,
         'Parent Email': object,
         'Start Week': int64,
-        'Final Grade': float64
+        'Final Grade': float64,
+        'Att Uptodate?': bool
     }
     StudentMap = StudentMap.astype(column_types)
 
@@ -659,6 +665,26 @@ def GenerateStudentMap(campus):
             # Copy data from AttandanceData to df_master
             StudentMap.at[index, 'Attendance (%)'] = matching_row['% Attendance']
 
+            # Copy if attance is up to date
+
+            current_som_week = past_two_weeks = 0
+            current_som_week = THIS_WEEK_NUM
+            past_two_weeks = str(current_som_week - 2)
+            #print("====> " + past_two_weeks)
+
+            if ("Lesson " + past_two_weeks) in AttandanceData.columns:
+                #print("Lesson " + past_two_weeks + " column does exits!" + " Value: " + str(matching_row["Lesson " + past_two_weeks]))
+                if matching_row["Lesson " + past_two_weeks] == None:
+                    # Lookup the first value in the first row in column "Org Defined ID" in df_att
+                    StudentMap.at[index, 'Att Uptodate?'] = False
+                    #print("Lesson " + past_two_weeks + " - Data missing!")
+                else: 
+                    #print("Lesson " + past_two_weeks + " - Data present!")
+                    StudentMap.at[index, 'Att Uptodate?'] = True
+            else:
+                #print("Lesson " + past_two_weeks + " column does NOT exits!")
+                StudentMap.at[index, 'Att Uptodate?'] = False
+
     print("End - Copying Attandance data")
 
     print("Start - Copying Grade data")
@@ -705,3 +731,68 @@ def GenerateStudentMap(campus):
         print(empty_rows)  
         return False 
     
+
+def FindMissingAttendance(campus):
+    print("Start - FindMissingAttendance")
+
+    if campus == "VAU":
+        student_map_file = VAU_STUDENT_MAP_FILE
+    elif campus == "MAE":
+        student_map_file = MAE_STUDENT_MAP_FILE
+    else: 
+        print("ERROR: Invalid campus name")
+        return False
+
+    df_student_map = pd.read_csv(student_map_file)
+
+    # Step 2: Create df1 with rows having "FALSE" in "Att Uptodate?"
+    df1 = df_student_map[df_student_map["Att Uptodate?"] == False]
+    #print(df1)
+
+    # Step 3: Create df2
+    # Using a dictionary to collect class codes for each unique teacher
+    teacher_info = {}
+    for _, row in df1.iterrows():
+        teacher = row["Teacher Full Name"]
+        class_code = row["Class Code"]
+        email = row["Teacher Email"]
+        
+        if teacher not in teacher_info:
+            teacher_info[teacher] = {"Class Codes": [class_code], "Email": email}
+        elif class_code not in teacher_info[teacher]["Class Codes"]:
+            teacher_info[teacher]["Class Codes"].append(class_code)
+
+    # Creating df2 from the dictionary
+    df2_data = [(teacher, info["Email"], info["Class Codes"]) for teacher, info in teacher_info.items()]
+    df2 = pd.DataFrame(df2_data, columns=["Teacher Full Name", "Teacher Email", "Class Codes"])
+
+    #print(df2)
+    return df2
+
+
+def email_to_stakeholders(df_missing_attendance):
+    print("Start - email_to_stakeholders")
+    teacher_email = ""
+
+    if SEND_EMAIL:
+
+        for _, row in df_missing_attendance.iterrows():
+            teacher = row["Teacher Full Name"]
+            my_string = ', '.join(row["Class Codes"])
+            teacher_email = row["Teacher Email"]
+
+            if TESTING: 
+                to = to_email
+                cc = ""
+            else:
+                to = teacher_email
+                cc = cc_email
+
+            subject_email="Please update your Brightspace class data"
+            body_email="Hello " + teacher + ",<br><br>" + \
+                    "Spirit of Math advises parents and students to access their class attendance and marks within a week after a class is completed.  \n\nOur records show that the following of your classes have not been updated for the past two weeks!  Please update ASAP and keep the above practice for the rest of this school year.  Thank you.<br><br>" \
+                        + my_string + "<br><br>Sincerely, <br>Ramzan Khuwaja"
+
+            send_email(to, cc, subject_email, body_email)
+
+
