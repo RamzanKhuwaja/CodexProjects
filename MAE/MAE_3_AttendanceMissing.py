@@ -11,7 +11,7 @@ def main():
         print("No missing attendance - Exiting MAE AttendanceMissing")
         return True
     else:
-        utils.email_to_stakeholders(df_missing_attendance)
+        utils.email_att_missing_to_stakeholders(df_missing_attendance)
         print("ERROR: Found missing attendance - Exiting MAE AttendanceMissing")
         return False
 
