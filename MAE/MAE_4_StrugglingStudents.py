@@ -3,27 +3,27 @@ from datetime import datetime
 import Common.my_utils as utils
 
 def main():
-    utils.set_campus_info("VAU")
+    utils.set_campus_info("MAE")
 
-    print("Entering VAU StrugglingStudents")
+    print("Entering MAE StrugglingStudents")
         
-    df_struggling_students = FindStrugglingStudents("VAU")
+    df_struggling_students = FindStrugglingStudents("MAE")
 
     if df_struggling_students.empty:
-        print("No struggling students - Exiting VAU StrugglingStudents")
+        print("No struggling students - Exiting MAE StrugglingStudents")
         return True
     else:
         email_struggling_students_to_stakeholders(df_struggling_students)
-        export_struggling_students_to_excel(df_struggling_students, "VAU")
+        export_struggling_students_to_excel(df_struggling_students, "MAE")
 
-        print("ERROR: Found struggling students - Exiting VAU StrugglingStudents")
+        print("ERROR: Found struggling students - Exiting MAE StrugglingStudents")
         return False
 
 def FindStrugglingStudents(campus):
     print("Start - FindStrugglingStudents")
 
-    if campus == "VAU":
-        student_map_file = utils.VAU_STUDENT_MAP_FILE
+    if campus == "MAE":
+        student_map_file = utils.MAE_STUDENT_MAP_FILE
     elif campus == "MAE":
         student_map_file = utils.MAE_STUDENT_MAP_FILE
     else: 
@@ -74,8 +74,8 @@ def email_struggling_students_to_stakeholders(df_struggling_students):
 def export_struggling_students_to_excel(df_struggling_students, campus):
     if utils.PRINT_REPORT:
 
-        if campus == "VAU":
-            grades_dir = utils.VAU_REPORT_DIRECTORY + "\\VAU_StrugglingStudents-"
+        if campus == "MAE":
+            grades_dir = utils.MAE_REPORT_DIRECTORY + "\\MAE_StrugglingStudents-"
         elif campus == "MAE":
             grades_dir = utils.MAE_REPORT_DIRECTORY + "\\MAE_StrugglingStudents-"
         else: 
