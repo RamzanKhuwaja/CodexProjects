@@ -16,7 +16,9 @@ SEND_EMAIL = True
 PRINT_REPORT = True
 THIS_WEEK_NUM = 20 #  <======  Change this every week!
 GRADES_MIN_BAR = int(50) # Scoring less than 50%!
+HIGH_HONOURS_MIN_BAR = int(90) # Scoring 90% or higher!
 NOT_LOGGED_IN_SINCE = int(14) # Not logged in since last 2 weeks!
+ATTENDANCE_MIN_BAR = int(80) # Min attendance required (in %)
 
 # Path where ClassMap file is stored
 VAU_CLASS_MAP_FILE  = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automation\Common\VAUClassMap2023-24.csv'
@@ -40,7 +42,7 @@ MAE_GRADES_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Grades\BSF
 
 # Path where PDF files are stored
 VAU_REPORT_DIRECTORY = r"C:\Users\ramza\Dropbox\VAUDocs\Automation\Ready For Printing\VAU"
-MAE_REPORT_DIRECTORY = r"C:\Users\ramza\Dropbox\VAUDocs\Automation\Ready For Printing\MAE"
+MAE_REPORT_DIRECTORY = r"C:\Users\ramza\Dropbox\MAE Share\Automation\Ready For Printing\MAE"
 
 # Ensure the directory exists else create one
 #os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -785,3 +787,210 @@ def email_att_missing_to_stakeholders(df_missing_attendance):
             send_email(to, cc, subject_email, body_email)
 
 
+def FindStrugglingStudents(campus):
+    print("Start - FindStrugglingStudents")
+
+    if campus == "VAU":
+        student_map_file = VAU_STUDENT_MAP_FILE
+    elif campus == "MAE":
+        student_map_file = MAE_STUDENT_MAP_FILE
+    else: 
+        print("ERROR: Invalid campus name")
+        return False
+
+    df_student_map = pd.read_csv(student_map_file)
+
+    df1 = df_student_map[df_student_map['Final Grade'] < GRADES_MIN_BAR]
+    #print(df1)
+
+    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Final Grade"])
+    return df2
+
+def FindHighHonoursStudents(campus):
+    print("Start - FindStrugglingStudents")
+
+    if campus == "VAU":
+        student_map_file = VAU_STUDENT_MAP_FILE
+    elif campus == "MAE":
+        student_map_file = MAE_STUDENT_MAP_FILE
+    else: 
+        print("ERROR: Invalid campus name")
+        return False
+
+    df_student_map = pd.read_csv(student_map_file)
+
+    df1 = df_student_map[df_student_map['Final Grade'] >= HIGH_HONOURS_MIN_BAR]
+    #print(df1)
+
+    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Final Grade", "Parent Email"])
+    return df2
+
+def FindNeedsToAttendMoreRegularly(campus):
+    print("Start - FindNeedsToAttendMoreRegularly")
+
+    if campus == "VAU":
+        student_map_file = VAU_STUDENT_MAP_FILE
+    elif campus == "MAE":
+        student_map_file = MAE_STUDENT_MAP_FILE
+    else: 
+        print("ERROR: Invalid campus name")
+        return False
+
+    df_student_map = pd.read_csv(student_map_file)
+
+    df1 = df_student_map[df_student_map['Attendance (%)'] < ATTENDANCE_MIN_BAR]
+    #print(df1)
+
+    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Attendance (%)", "Parent Email"])
+    return df2
+
+
+def export_struggling_students_to_excel(df_struggling_students, campus):
+    if PRINT_REPORT:
+
+        if campus == "VAU":
+            grades_dir = VAU_REPORT_DIRECTORY + "\\VAU_StrugglingStudents-"
+        elif campus == "MAE":
+            grades_dir = MAE_REPORT_DIRECTORY + "\\MAE_StrugglingStudents-"
+        else: 
+            print("ERROR: Invalid campus name")
+            return False
+
+        # Get today's date
+        today = datetime.now()
+
+        # Format the date as a string
+        date_string = today.strftime("%B %d, %Y")  # Format (e.g.,): November 23, 2023
+
+        # Specify the output path
+        output_path = grades_dir + date_string + ".xlsx"
+
+        # Example condition: selecting students with a final grade less than 60
+        condition = df_struggling_students['Final Grade'] < GRADES_MIN_BAR
+
+        # Apply the condition and then sort
+        df_struggling_students = df_struggling_students[condition].sort_values(
+            by=["Teacher Full Name", "Class Code", "Student Full Name", "Final Grade"], 
+            ascending=[True, True, True, True]
+        )
+
+        df_struggling_students.to_excel(output_path, index=False)
+        print("MAE_StrugglingStudents exported to " + output_path)
+
+
+def RemindForBSLogin(campus):
+    print("Start - RemindForBSLogin")
+
+    if campus == "VAU":
+        student_map_file = VAU_STUDENT_MAP_FILE
+    elif campus == "MAE":
+        student_map_file = MAE_STUDENT_MAP_FILE
+    else: 
+        print("ERROR: Invalid campus name")
+        return False
+
+    df_student_map = pd.read_csv(student_map_file)
+
+    targeted_df = df_student_map[df_student_map['Last Accessed'].apply (lambda x: is_within_days(x, NOT_LOGGED_IN_SINCE))]
+
+    # Define the columns you want to keep
+    columns_to_keep = ["Student Full Name", "Last Accessed", "Class Code", "Teacher Full Name", "Teacher Email", "Teacher Group", "Parent Email"]
+    targeted_df = targeted_df[columns_to_keep]
+    return targeted_df
+
+
+def export_student_reminder_to_excel(df_remind_students, campus):
+    if PRINT_REPORT:
+
+        if campus == "VAU":
+            report_dir = VAU_REPORT_DIRECTORY + "\\VAU_RemindForBSLogin-"
+        elif campus == "MAE":
+            report_dir = MAE_REPORT_DIRECTORY + "\\MAE_RemindForBSLogin-"
+        else: 
+            print("ERROR: Invalid campus name")
+            return False
+
+        # Get today's date
+        today = datetime.now()
+
+        # Format the date as a string
+        date_string = today.strftime("%B %d, %Y")  # Format (e.g.,): November 23, 2023
+
+        # Specify the output path
+        output_path = report_dir + date_string + ".xlsx"
+
+        df2 = pd.DataFrame(df_remind_students, columns=["Teacher Full Name", "Class Code", "Student Full Name", "Last Accessed", "Parent Email"])
+
+        df2 = df2.sort_values(
+            by=["Teacher Full Name", "Class Code", "Student Full Name", "Last Accessed"], 
+            ascending=[True, True, True, True]
+        )
+
+        df2.to_excel(output_path, index=False)
+        print("MAE_RemindStudents exported to " + output_path)
+
+
+def export_high_honours_students_to_excel(df_high_honours_students, campus):
+    if PRINT_REPORT:
+
+        if campus == "VAU":
+            grades_dir = VAU_REPORT_DIRECTORY + "\\VAU_HighHonours-"
+        elif campus == "MAE":
+            grades_dir = MAE_REPORT_DIRECTORY + "\\MAE_HighHonours-"
+        else: 
+            print("ERROR: Invalid campus name")
+            return False
+
+        # Get today's date
+        today = datetime.now()
+
+        # Format the date as a string
+        date_string = today.strftime("%B %d, %Y")  # Format (e.g.,): November 23, 2023
+
+        # Specify the output path
+        output_path = grades_dir + date_string + ".xlsx"
+
+        df2 = pd.DataFrame(df_high_honours_students, columns=["Teacher Full Name", "Class Code", "Student Full Name", "Final Grade", "Parent Email"])
+
+
+        # Example condition: selecting students with a final grade less than 60
+        condition = df2['Final Grade'] >= HIGH_HONOURS_MIN_BAR
+
+        # Apply the condition and then sort
+        df2 = df2[condition].sort_values(
+            by=["Teacher Full Name", "Class Code", "Student Full Name", "Final Grade"], 
+            ascending=[True, True, True, True]
+        )
+
+        df2.to_excel(output_path, index=False)
+        print(campus + " - HighHonours exported to " + output_path)
+
+def export_students_to_attend_more_to_excel(df_remind_students, campus):
+    if PRINT_REPORT:
+
+        if campus == "VAU":
+            report_dir = VAU_REPORT_DIRECTORY + "\\VAU_NeedsToAttendMoreRegularly-"  
+        elif campus == "MAE":
+            report_dir = MAE_REPORT_DIRECTORY + "\\MAE_NeedsToAttendMoreRegularly-"
+        else: 
+            print("ERROR: Invalid campus name")
+            return False
+
+        # Get today's date
+        today = datetime.now()
+
+        # Format the date as a string
+        date_string = today.strftime("%B %d, %Y")  # Format (e.g.,): November 23, 2023
+
+        # Specify the output path
+        output_path = report_dir + date_string + ".xlsx"
+
+        df2 = pd.DataFrame(df_remind_students, columns=["Teacher Full Name", "Class Code", "Student Full Name", "Attendance (%)", "Parent Email"])
+
+        df2 = df2.sort_values(
+            by=["Teacher Full Name", "Class Code", "Student Full Name", "Attendance (%)"], 
+            ascending=[True, True, True, True]
+        )
+
+        df2.to_excel(output_path, index=False)
+        print("MAE_RemindStudents exported to " + output_path)
