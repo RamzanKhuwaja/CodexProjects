@@ -754,7 +754,9 @@ def FindMissingAttendance(campus):
     df1 = df_student_map[df_student_map["Att Uptodate?"] == False]
     #print(df1)
 
-    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Att Uptodate?"])
+    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Att Uptodate?", "Start Week"])
+    df2['Start Week'] = df2['Start Week'].astype(int)
+    
     return df2
 
 
@@ -770,7 +772,7 @@ def email_att_missing_to_stakeholders(df_missing_attendance):
             teacher = df1["Teacher Full Name"].iloc[0]
             teacher_email = email
 
-            df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Att Uptodate?"])
+            df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Att Uptodate?", "Start Week"])
 
             if TESTING: 
                 to = to_email
@@ -803,7 +805,8 @@ def FindStrugglingStudents(campus):
     df1 = df_student_map[df_student_map['Final Grade'] < GRADES_MIN_BAR]
     #print(df1)
 
-    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Final Grade"])
+    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Final Grade", "Start Week"])
+    df2['Start Week'] = df2['Start Week'].astype(int)
     return df2
 
 def FindHighHonoursStudents(campus):
