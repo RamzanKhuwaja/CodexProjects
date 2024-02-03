@@ -1,7 +1,7 @@
-import MAECheckClassMap as check1
-import MAEDupStudentsInBSViaClassList as check2
-import MAEDupStudentsInBSViaAttendance as check3
-import MAEDupStudentsInBSViaGrades as check4
+import MAE.MAE_11_CheckClassMap as check1
+import MAE.MAE_12_DupStudentsInBSViaClassList as check2
+import MAE.MAE_13_DupStudentsInBSViaAttendance as check3
+import MAE.MAE_14_DupStudentsInBSViaGrades as check4
 
 def main():
     print("\n===========================================\n")
