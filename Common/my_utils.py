@@ -11,10 +11,10 @@ from datetime import datetime, timedelta
 
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
-TESTING = True
+TESTING = True  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
+THIS_WEEK_NUM = 22 #  <======  Change this every week!!!!!!!!!!!!!!
 SEND_EMAIL = True
 PRINT_REPORT = True
-THIS_WEEK_NUM = 20 #  <======  Change this every week!
 GRADES_MIN_BAR = int(50) # Scoring less than 50%!
 HIGH_HONOURS_MIN_BAR = int(90) # Scoring 90% or higher!
 NOT_LOGGED_IN_SINCE = int(14) # Not logged in since last 2 weeks!
@@ -125,10 +125,16 @@ def send_email(to, cc, subject, body):
     outlook = email_client.Dispatch("outlook.application")
     mail = outlook.CreateItem(0)  # 0 is the code for an email item
 
+    # Get today's date
+    today = datetime.now()
+
+    # Format the date as a string
+    date_string = today.strftime("%B %d, %Y")  # Format (e.g.,): November 23, 2023
+
     # Set mail properties
     mail.To = to  # String of recipient email addresses
     mail.CC = cc  # String of CC email addresses
-    mail.Subject = subject  # String for the email's subject
+    mail.Subject = CAMPUS + ": " + date_string + ": " + subject  # String for the email's subject
     #mail.Body = body  # String for the email's body
     # Set the email body to HTML
     mail.HTMLBody = body  # String containing HTML for the email's body
@@ -783,8 +789,10 @@ def email_att_missing_to_stakeholders(df_missing_attendance):
 
             subject_email="Please update your Brightspace class data"
             body_email="Hello " + teacher + ",<br><br>" + \
-                    "Spirit of Math advises parents and students to access their class attendance and marks within a week after a class is completed.  \n\nOur records show that the following of your classes have not been updated for the past two weeks!  Please update ASAP and keep the above practice for the rest of this school year.  Thank you.<br><br>" \
-                        + df2.to_html(index=False) + "<br><br>Sincerely, <br>Ramzan Khuwaja"
+                    "Spirit of Math advises parents and students to access their class attendance and marks within a week after a class is completed.  <br><br> Our records show that the following of your students/classes have not been updated for the past two weeks!  Please update ASAP and keep the above practice for the rest of this school year.  <br>" \
+                        + "No need to respond to this email, just make the applicable corrections.  Thank you.<br><br>" \
+                        + df2.to_html(index=False) + "<br><br>Sincerely, <br>Ramzan Khuwaja<br><br>" \
+                        + "P.S. Start Week = -1 means you have not added the start for this student in the Brightspace.  Please add, if missing.<br>"
 
             send_email(to, cc, subject_email, body_email)
 
@@ -930,7 +938,7 @@ def export_student_reminder_to_excel(df_remind_students, campus):
         )
 
         df2.to_excel(output_path, index=False)
-        print("MAE_RemindStudents exported to " + output_path)
+        print("RemindStudents exported to " + output_path)
 
 
 def export_high_honours_students_to_excel(df_high_honours_students, campus):
@@ -996,4 +1004,4 @@ def export_students_to_attend_more_to_excel(df_remind_students, campus):
         )
 
         df2.to_excel(output_path, index=False)
-        print("MAE_RemindStudents exported to " + output_path)
+        print("RemindStudents exported to " + output_path)
