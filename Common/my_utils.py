@@ -13,8 +13,9 @@ CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
 TESTING = True  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
 THIS_WEEK_NUM = 22 #  <======  Change this every week!!!!!!!!!!!!!!
-SEND_EMAIL = True
+SEND_EMAIL = False
 PRINT_REPORT = True
+SEND_SUMMARY = True
 GRADES_MIN_BAR = int(50) # Scoring less than 50%!
 HIGH_HONOURS_MIN_BAR = int(90) # Scoring 90% or higher!
 NOT_LOGGED_IN_SINCE = int(14) # Not logged in since last 2 weeks!
@@ -1005,3 +1006,54 @@ def export_students_to_attend_more_to_excel(df_remind_students, campus):
 
         df2.to_excel(output_path, index=False)
         print("RemindStudents exported to " + output_path)
+
+
+def SummaryOfStrugglingStudents():
+    print("Start - SummaryOfStrugglingStudents")
+
+    if CAMPUS == "VAU":
+        student_map_file = VAU_STUDENT_MAP_FILE
+    elif CAMPUS == "MAE":
+        student_map_file = MAE_STUDENT_MAP_FILE
+    else: 
+        print("ERROR: Invalid campus name")
+        return False
+
+    df_student_map = pd.read_csv(student_map_file)
+
+    # Group by 'Teacher Full Name' and apply the calculation
+    result = df_student_map.groupby('Teacher Full Name').apply(calculate_ranges).reset_index()
+
+    # Sort the result DataFrame by 'Total Students' in descending order
+    result = result.sort_values(by='Total Students', ascending=False)
+
+    # Print the DataFrame without the index column
+    print(result.to_string(index=False))
+
+    print("End - SummaryOfStrugglingStudents")
+
+    return result
+
+
+# Function to calculate counts within specified percentage ranges
+def calculate_ranges(group):
+    # Define percentage thresholds and their respective column names
+    thresholds = [10, 20, 30, 40, 50]
+    column_names = ['1 to 10%', '11 to 20%', '21 to 30%', '31 to 40%', '41 to 50%']
+
+    counts = [0] * len(thresholds)  # Initialize counts for each range
+    total_students = 0  # Initialize total students count
+    for i, t in enumerate(thresholds):
+        # Count students whose final grade is less than the current threshold
+        count = (group['Final Grade'] < t).sum()
+        if i == 0:
+            # For the first range, it's directly the count
+            counts[i] = count
+        else:
+            # For subsequent ranges, it's the difference from the previous threshold
+            counts[i] = count - sum(counts[:i])
+        total_students += counts[i]  # Update total students count
+    
+    return pd.Series(counts + [total_students], index=column_names + ['Total Students'])
+
+
