@@ -2,6 +2,7 @@ import os
 import re
 import time
 import pdfkit
+import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
 from numpy import float64, int64
@@ -43,7 +44,7 @@ MAE_GRADES_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Grades\BSF
 
 # Path where PDF files are stored
 VAU_REPORT_DIRECTORY = r"C:\Users\ramza\Dropbox\VAUDocs\Automation\Ready For Printing\VAU"
-MAE_REPORT_DIRECTORY = r"C:\Users\ramza\Dropbox\MAE Share\Automation\Ready For Printing\MAE"
+MAE_REPORT_DIRECTORY = r"C:\Users\ramza\OneDrive - Spirit of Math Schools\MECollaborationSpace\BrightSpaceReports"
 
 # Ensure the directory exists else create one
 #os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -868,6 +869,8 @@ def export_struggling_students_to_excel(df_struggling_students, campus):
             print("ERROR: Invalid campus name")
             return False
 
+        # Export Details
+
         # Get today's date
         today = datetime.now()
 
@@ -886,7 +889,11 @@ def export_struggling_students_to_excel(df_struggling_students, campus):
             ascending=[True, True, True, True]
         )
 
-        df_struggling_students.to_excel(output_path, index=False)
+        df_struggling_students.to_excel(output_path, sheet_name='Details',index=False)
+
+        # Export Summary
+        SummaryOfStrugglingStudents(output_path)
+
         print("MAE_StrugglingStudents exported to " + output_path)
 
 
@@ -938,7 +945,7 @@ def export_student_reminder_to_excel(df_remind_students, campus):
             ascending=[True, True, True, True]
         )
 
-        df2.to_excel(output_path, index=False)
+        df2.to_excel(output_path, sheet_name='Details',index=False)
         print("RemindStudents exported to " + output_path)
 
 
@@ -974,7 +981,7 @@ def export_high_honours_students_to_excel(df_high_honours_students, campus):
             ascending=[True, True, True, True]
         )
 
-        df2.to_excel(output_path, index=False)
+        df2.to_excel(output_path, sheet_name='Details', index=False)
         print(campus + " - HighHonours exported to " + output_path)
 
 def export_students_to_attend_more_to_excel(df_remind_students, campus):
@@ -1004,55 +1011,77 @@ def export_students_to_attend_more_to_excel(df_remind_students, campus):
             ascending=[True, True, True, True]
         )
 
-        df2.to_excel(output_path, index=False)
+        df2.to_excel(output_path, sheet_name='Details', index=False)
         print("RemindStudents exported to " + output_path)
 
 
-def SummaryOfStrugglingStudents():
+def SummaryOfStrugglingStudents(output_path):
     print("Start - SummaryOfStrugglingStudents")
-
+   
     if CAMPUS == "VAU":
         student_map_file = VAU_STUDENT_MAP_FILE
     elif CAMPUS == "MAE":
         student_map_file = MAE_STUDENT_MAP_FILE
     else: 
         print("ERROR: Invalid campus name")
-        return False
+        return
 
     df_student_map = pd.read_csv(student_map_file)
+
+    # Assuming calculate_ranges is defined elsewhere in your script
 
     # Group by 'Teacher Full Name' and apply the calculation
     result = df_student_map.groupby('Teacher Full Name').apply(calculate_ranges).reset_index()
 
-    # Sort the result DataFrame by 'Total Students' in descending order
-    result = result.sort_values(by='Total Students', ascending=False)
+    # Sort the DataFrame by a column if necessary
+    result_sorted = result.sort_values(by='Total Students', ascending=False) if 'Total Students' in result.columns else result
+
+    # Create a blank row DataFrame with NaN values
+    blank_row = pd.DataFrame(np.nan, index=[0], columns=result_sorted.columns)
+
+    # Calculate totals across columns for the summary row
+    totals = result_sorted.sum(numeric_only=True)
+    
+    # Assuming the first column is where you want to place the "TOTAL" label
+    # Adjust the following line if your DataFrame structure is different
+    totals_df = pd.DataFrame([["TOTAL"] + totals.tolist()], columns=result_sorted.columns)
+
+    # Concatenate the sorted result with the blank row and the totals row
+    result_with_summary = pd.concat([result_sorted, blank_row, totals_df], ignore_index=True)
 
     # Print the DataFrame without the index column
-    print(result.to_string(index=False))
+    print(result_with_summary.to_string(index=False))
+
+    # Save to Excel
+    with pd.ExcelWriter(output_path, engine='openpyxl', mode='a') as writer:
+        result_with_summary.to_excel(writer, sheet_name='Summary', index=False)
 
     print("End - SummaryOfStrugglingStudents")
 
-    return result
+    return result_with_summary
 
 
-# Function to calculate counts within specified percentage ranges
+
 def calculate_ranges(group):
     # Define percentage thresholds and their respective column names
     thresholds = [10, 20, 30, 40, 50]
     column_names = ['1 to 10%', '11 to 20%', '21 to 30%', '31 to 40%', '41 to 50%']
 
-    counts = [0] * len(thresholds)  # Initialize counts for each range
-    total_students = 0  # Initialize total students count
+    # Initialize counts for each range
+    counts = [0] * len(thresholds)
+    # Initialize total students count
+    total_students = 0  
+
     for i, t in enumerate(thresholds):
-        # Count students whose final grade is less than the current threshold
-        count = (group['Final Grade'] < t).sum()
         if i == 0:
-            # For the first range, it's directly the count
-            counts[i] = count
+            # Count students whose final grade is less than the current threshold for the first range
+            counts[i] = (group['Final Grade'] < t).sum()
         else:
-            # For subsequent ranges, it's the difference from the previous threshold
-            counts[i] = count - sum(counts[:i])
-        total_students += counts[i]  # Update total students count
+            # For subsequent ranges, calculate the difference
+            counts[i] = (group['Final Grade'] < t).sum() - (group['Final Grade'] < thresholds[i-1]).sum()
+
+        # Update total students count
+        total_students += counts[i]
     
     return pd.Series(counts + [total_students], index=column_names + ['Total Students'])
 

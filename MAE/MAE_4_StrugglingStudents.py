@@ -17,7 +17,6 @@ def main():
         utils.export_struggling_students_to_excel(df_struggling_students, "MAE")
 
         print("ERROR: Found struggling students - Exiting MAE StrugglingStudents")
-        utils.SummaryOfStrugglingStudents()
         return False
 
 def email_struggling_students_to_stakeholders(df_struggling_students):
