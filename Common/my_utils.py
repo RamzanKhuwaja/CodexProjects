@@ -12,9 +12,9 @@ from datetime import datetime, timedelta
 
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
-TESTING = True  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-THIS_WEEK_NUM = 22 #  <======  Change this every week!!!!!!!!!!!!!!
-SEND_EMAIL = False
+TESTING = False    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
+THIS_WEEK_NUM = 27 #  <======  Change this every week!!!!!!!!!!!!!!
+SEND_EMAIL = True
 PRINT_REPORT = True
 SEND_SUMMARY = True
 GRADES_MIN_BAR = int(50) # Scoring less than 50%!
@@ -794,7 +794,7 @@ def email_att_missing_to_stakeholders(df_missing_attendance):
                     "Spirit of Math advises parents and students to access their class attendance and marks within a week after a class is completed.  <br><br> Our records show that the following of your students/classes have not been updated for the past two weeks!  Please update ASAP and keep the above practice for the rest of this school year.  <br>" \
                         + "No need to respond to this email, just make the applicable corrections.  Thank you.<br><br>" \
                         + df2.to_html(index=False) + "<br><br>Sincerely, <br>Ramzan Khuwaja<br><br>" \
-                        + "P.S. Start Week = -1 means you have not added the start for this student in the Brightspace.  Please add, if missing.<br>"
+                        + "P.S. Start Week = -1 means you have not added the start week for this student in the Brightspace.  Please add, if missing.<br>"
 
             send_email(to, cc, subject_email, body_email)
 
@@ -854,7 +854,7 @@ def FindNeedsToAttendMoreRegularly(campus):
     df1 = df_student_map[df_student_map['Attendance (%)'] < ATTENDANCE_MIN_BAR]
     #print(df1)
 
-    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Attendance (%)", "Parent Email"])
+    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Attendance (%)", "Start Week", "Parent Email"])
     return df2
 
 
@@ -1004,7 +1004,7 @@ def export_students_to_attend_more_to_excel(df_remind_students, campus):
         # Specify the output path
         output_path = report_dir + date_string + ".xlsx"
 
-        df2 = pd.DataFrame(df_remind_students, columns=["Teacher Full Name", "Class Code", "Student Full Name", "Attendance (%)", "Parent Email"])
+        df2 = pd.DataFrame(df_remind_students, columns=["Teacher Full Name", "Class Code", "Student Full Name", "Attendance (%)", "Start Week", "Parent Email"])
 
         df2 = df2.sort_values(
             by=["Teacher Full Name", "Class Code", "Student Full Name", "Attendance (%)"], 
