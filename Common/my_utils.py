@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
 TESTING = True     #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-THIS_WEEK_NUM = 27 #  <======  Change this every week!!!!!!!!!!!!!!
+THIS_WEEK_NUM = 29 #  <======  Change this every week!!!!!!!!!!!!!!
 SEND_EMAIL = True
 PRINT_REPORT = True
 SEND_SUMMARY = True
