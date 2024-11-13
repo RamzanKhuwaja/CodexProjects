@@ -19,7 +19,7 @@ except ImportError:
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
 TESTING = True     #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-THIS_WEEK_NUM = 10 #  <======  Change this every week!!!!!!!!!!!!!!
+THIS_WEEK_NUM = 9 #  <======  Change this every week!!!!!!!!!!!!!!
 SEND_EMAIL = True
 PRINT_REPORT = True
 SEND_SUMMARY = True
@@ -184,10 +184,9 @@ def convert_date_format(date_str):
         new_date_str = str(datetime.now().strftime('%b %d, %Y'))
     return new_date_str
 
-def is_within_days(date_str, NOT_LOGGED_IN_SINCE):
-    # Change the format here to '%d-%b-%y' to match the input date format 'DD-Mon-YY'
-    date_object = datetime.strptime(date_str, '%b %d, %Y') #'%d-%b-%y')
-    fourteen_days_ago = datetime.now() - timedelta(days=NOT_LOGGED_IN_SINCE)
+def is_within_days(date_str, days):
+    date_object = datetime.strptime(date_str, '%d-%b-%y')
+    fourteen_days_ago = datetime.now() - timedelta(days=days)
     return date_object < fourteen_days_ago
 
 # Generate HTML code for head and body start
@@ -295,7 +294,7 @@ def calculate_final_grade(row):
 def add_class_list_data(master_df, class_list_dir_path):
     os.chdir(class_list_dir_path)
     for filename in os.listdir(class_list_dir_path):
-        if filename.endswith(".htm"):
+        if filename.endswith(".html"):
             # Read the HTML file
             tables = pd.read_html(filename)
 
@@ -306,19 +305,23 @@ def add_class_list_data(master_df, class_list_dir_path):
 
                 # Filter the DataFrame to only include rows where the role is 'student'
                 student_df = seventh_table_df[seventh_table_df['Role'] == 'Student']
-                student_df = student_df.rename(columns={'First Name,\xa0Last Name': 'Student Full Name'})
-
+                # Print column names to see what they actually are
+                print("Column names:", student_df.columns.tolist())
+                #student_df = student_df.rename(columns={'First Name,\xa0Last Name': 'Student Full Name'})
+                student_df = student_df.rename(columns={'Last NameFirst Name': 'Student Full Name'})
+                #print(student_df)
                 # Define the columns you want to keep
                 columns_to_keep = ["Org Defined ID", "Student Full Name", "Last Accessed"]
 
                 # Select only these columns from student_df
                 filtered_student_df = student_df[columns_to_keep].copy()
+                
                 filtered_student_df['Org Defined ID'] = filtered_student_df['Org Defined ID'].astype(int64)
                 filtered_student_df['Student Full Name'] = filtered_student_df['Student Full Name'].astype(object)
                 filtered_student_df['Org Defined ID'] = filtered_student_df['Org Defined ID'].astype(object)
 
                 # Define the default date in the specified format
-                default_date = 'Sep 01, 2023 5:50 PM'
+                default_date = 'Sep 01, 2024 5:50 PM'
 
                 # Check for missing values and fill them
                 filtered_student_df['Last Accessed'] = filtered_student_df['Last Accessed'].apply(lambda x: default_date if pd.isna(x) else x)
