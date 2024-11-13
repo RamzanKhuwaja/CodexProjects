@@ -1,7 +1,11 @@
-import MAE.MAE_11_CheckClassMap as check1
-import MAE.MAE_12_DupStudentsInBSViaClassList as check2
-import MAE.MAE_13_DupStudentsInBSViaAttendance as check3
-import MAE.MAE_14_DupStudentsInBSViaGrades as check4
+try:
+    import MAE_11_CheckClassMap as check1
+    import MAE_12_DupStudentsInBSViaClassList as check2
+    import MAE_13_DupStudentsInBSViaAttendance as check3
+    import MAE_14_DupStudentsInBSViaGrades as check4
+except ImportError as e:
+    print(f"Error importing MAE modules: {e}")
+    exit(1)
 
 def main():
     print("\n===========================================\n")

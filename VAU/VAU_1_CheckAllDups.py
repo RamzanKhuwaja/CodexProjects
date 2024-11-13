@@ -1,7 +1,7 @@
-import VAU.VAU_11_CheckClassMap as check1
-import VAU.VAU_12_DupStudentsInBSViaClassList as check2
-import VAU.VAU_13_DupStudentsInBSViaAttendance as check3
-import VAU.VAU_14_DupStudentsInBSViaGrades as check4
+import VAU_11_CheckClassMap as check1
+import VAU_12_DupStudentsInBSViaClassList as check2
+import VAU_13_DupStudentsInBSViaAttendance as check3
+import VAU_14_DupStudentsInBSViaGrades as check4
 
 def main():
     print("\n===========================================\n")

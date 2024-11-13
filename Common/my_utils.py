@@ -1,7 +1,6 @@
 import os
 import re
 import time
-import pdfkit
 import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -9,11 +8,18 @@ from numpy import float64, int64
 import win32com.client as email_client
 from datetime import datetime, timedelta
 
+try:
+    import pdfkit
+except ImportError:
+    print("Warning: pdfkit module not found. PDF functionality will not be available.")
+    print("To install, run: pip install pdfkit")
+    pdfkit = None
+
 
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
 TESTING = True     #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-THIS_WEEK_NUM = 29 #  <======  Change this every week!!!!!!!!!!!!!!
+THIS_WEEK_NUM = 10 #  <======  Change this every week!!!!!!!!!!!!!!
 SEND_EMAIL = True
 PRINT_REPORT = True
 SEND_SUMMARY = True
@@ -23,28 +29,28 @@ NOT_LOGGED_IN_SINCE = int(14) # Not logged in since last 2 weeks!
 ATTENDANCE_MIN_BAR = int(80) # Min attendance required (in %)
 
 # Path where ClassMap file is stored
-VAU_CLASS_MAP_FILE  = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automation\Common\VAUClassMap2023-24.csv'
-MAE_CLASS_MAP_FILE  = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automation\Common\MAEClassMap2023-24.csv'
+VAU_CLASS_MAP_FILE  = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\VAUClassMap2024-25.csv'
+MAE_CLASS_MAP_FILE  = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\MAEClassMap2024-25.csv'
 
 # Path where StudentMap file is stored
-VAU_STUDENT_MAP_FILE = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automation\Common\VAUStudentMap2023-24.csv'
-MAE_STUDENT_MAP_FILE = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Code\Automation\Common\MAEStudentMap2023-24.csv'
+VAU_STUDENT_MAP_FILE = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\VAUStudentMap2024-25.csv'
+MAE_STUDENT_MAP_FILE = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\MAEStudentMap2024-25.csv'
 
 # Directory containing the CSV files for Attendance
-VAU_ATTENDANCE_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\VAU\Attendance\BSFiles'
-MAE_ATTENDANCE_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Attendance\BSFiles'
+VAU_ATTENDANCE_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\VAU\Attendance'
+MAE_ATTENDANCE_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\MAE\Attendance'
 
-# Dir where Brightspace Class List (HTML files)downloaded files are stored
-VAU_CLASS_LIST_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\VAU\BSLogin'
-MAE_CLASS_LIST_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\BSLogin'
+# Dir where Brightspace ClassList (HTML files)downloaded files are stored
+VAU_CLASS_LIST_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\VAU\ClassList'
+MAE_CLASS_LIST_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\MAE\ClassList'
 
 # Directory containing the CSV files for Grades
-VAU_GRADES_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\VAU\Grades\BSFiles'
-MAE_GRADES_DIR = r'C:\Users\ramza\Dropbox\VAUDocs\Automation\Data\MAE\Grades\BSFiles'
+VAU_GRADES_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\VAU\Grades'
+MAE_GRADES_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\MAE\Grades'
 
 # Path where PDF files are stored
-VAU_REPORT_DIRECTORY = r"C:\Users\ramza\Dropbox\VAUDocs\Automation\Ready For Printing\VAU"
-MAE_REPORT_DIRECTORY = r"C:\Users\ramza\OneDrive - Spirit of Math Schools\MECollaborationSpace\BrightSpaceReports"
+VAU_REPORT_DIRECTORY = r"C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Ready For Printing\VAU"
+MAE_REPORT_DIRECTORY = r"C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Ready For Printing\MAE"
 
 # Ensure the directory exists else create one
 #os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -465,7 +471,7 @@ def FindDupStudentsInBSViaClassList (BSdirectory):
     # Read each HTML file in this directory using pandas library
     os.chdir(BSdirectory)
     for filename in os.listdir(BSdirectory):
-        if filename.endswith(".htm"):
+        if filename.endswith(".html"):
             # Read the HTML file
             tables = pd.read_html(filename)
 
