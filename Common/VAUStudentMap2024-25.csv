@@ -1,16 +1,16 @@
 Org Defined ID,Student Full Name,Last Accessed,Class Code,Teacher Full Name,Teacher Email,Teacher Group,Attendance (%),Parent Email,Start Week,Final Grade,Att Uptodate?
-34955,"Shakibi, Nikki",04-Nov-24,SOMp2403Mo0630ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,90.91,h_hajebi583@yahoo.com,-1,61,TRUE
-32831,"Tsang, Jordan",29-Sep-24,SOMp2403Mo0630ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100,mirandamok@gmail.com,-1,81,TRUE
-40013,"Vitale, Liam",03-Nov-24,SOMp2403Mo0630ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100,ravit.bronzman@gmail.com,-1,43,TRUE
-32230,"XU, LANDON",01-Sep-23,SOMp2403Mo0630ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100,lanyani@gmail.com,-1,86,TRUE
-37449,"Bhayani, Arya",01-Sep-23,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,90.91,Purvibhayani3@gmail.com,-1,59,TRUE
-33728,"Chang, Tyler",03-Nov-24,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100,lmlum77@gmail.com,-1,93,TRUE
-39523,"ESLAMNEZHAD, ANISA",14-Oct-24,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,97.5,papa.fallah@gmail.com,-1,28,TRUE
-23188,"Gill-Sandhu, Aekam",24-Sep-24,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100,s.gill7@gmail.com,-1,33,TRUE
-20877,"Kalsi, Nyla",09-Nov-24,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,81.82,kalsifamily2015@gmail.com,-1,39,TRUE
-29314,"Lim, Alex",01-Sep-23,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,98.18,emmaito@gmail.com,-1,57,TRUE
-30943,"Nguyen, Ava",14-Oct-24,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,90.91,leenguyen12@outlook.com,-1,42,TRUE
-30941,"Nguyen, Max",01-Sep-23,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100,leenguyen12@outlook.com,-1,65,TRUE
-27086,"Sachlos, Giorgio",01-Sep-23,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,72.73,pina.dagostino@gmail.com,-1,44,TRUE
-38698,"Sinha, Rayirth",08-Nov-24,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100,reenugupta2@gmail.com,-1,54,TRUE
-32797,"Tsang, Tristan",08-Oct-24,SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100,mirandamok@gmail.com,-1,86,TRUE
+40013,"Vitale, Liam","Nov 03, 2024",SOMp2403Mo0630ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100.0,ravit.bronzman@gmail.com,-1.0,43.0,True
+34955,"Shakibi, Nikki","Nov 04, 2024",SOMp2403Mo0630ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,90.91,h_hajebi583@yahoo.com,-1.0,61.0,True
+32831,"Tsang, Jordan","Sep 29, 2024",SOMp2403Mo0630ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100.0,mirandamok@gmail.com,-1.0,81.0,True
+32230,"XU, LANDON","Sep 01, 2024",SOMp2403Mo0630ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100.0,lanyani@gmail.com,-1.0,86.0,True
+39523,"ESLAMNEZHAD, ANISA","Oct 14, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,97.5,papa.fallah@gmail.com,-1.0,28.0,True
+38698,"Sinha, Rayirth","Nov 08, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100.0,reenugupta2@gmail.com,-1.0,54.0,True
+37449,"Bhayani, Arya","Sep 01, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,90.91,Purvibhayani3@gmail.com,-1.0,59.0,True
+33728,"Chang, Tyler","Nov 03, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100.0,lmlum77@gmail.com,-1.0,93.0,True
+32797,"Tsang, Tristan","Oct 08, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100.0,mirandamok@gmail.com,-1.0,86.0,True
+30943,"Nguyen, Ava","Oct 14, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,90.91,leenguyen12@outlook.com,-1.0,42.0,True
+30941,"Nguyen, Max","Sep 01, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100.0,leenguyen12@outlook.com,-1.0,65.0,True
+29314,"Lim, Alex","Sep 01, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,98.18,emmaito@gmail.com,-1.0,57.0,True
+27086,"Sachlos, Giorgio","Sep 01, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,72.73,pina.dagostino@gmail.com,-1.0,44.0,True
+23188,"Gill-Sandhu, Aekam","Sep 24, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,100.0,s.gill7@gmail.com,-1.0,33.0,True
+20877,"Kalsi, Nyla","Nov 09, 2024",SOMp2404Mo0430ETVAU,Banafsheh Ebrahimi,bebrahimi@spiritofmath.com,class_list_1,81.82,kalsifamily2015@gmail.com,-1.0,39.0,True
