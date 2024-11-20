@@ -19,7 +19,7 @@ except ImportError:
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
 TESTING = True     #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-THIS_WEEK_NUM = 9 #  <======  Change this every week!!!!!!!!!!!!!!
+THIS_WEEK_NUM = 10 #  <======  Change this every week!!!!!!!!!!!!!!
 SEND_EMAIL = True
 PRINT_REPORT = True
 SEND_SUMMARY = True
@@ -129,27 +129,31 @@ def clean_cell(cell_value):
     
 
 def send_email(to, cc, subject, body):
-    # Use the Dispatch method to interact with Outlook
-    outlook = email_client.Dispatch("outlook.application")
-    mail = outlook.CreateItem(0)  # 0 is the code for an email item
+    try:
+        # Use the Dispatch method to interact with Outlook
+        outlook = email_client.Dispatch("outlook.application")
+        mail = outlook.CreateItem(0)  # 0 is the code for an email item
 
-    # Get today's date
-    today = datetime.now()
+        # Get today's date
+        today = datetime.now()
 
-    # Format the date as a string
-    date_string = today.strftime("%B %d, %Y")  # Format (e.g.,): November 23, 2023
+        # Format the date as a string
+        date_string = today.strftime("%B %d, %Y")  # Format (e.g.,): November 23, 2023
 
-    # Set mail properties
-    mail.To = to  # String of recipient email addresses
-    mail.CC = cc  # String of CC email addresses
-    mail.Subject = CAMPUS + ": " + date_string + ": " + subject  # String for the email's subject
-    #mail.Body = body  # String for the email's body
-    # Set the email body to HTML
-    mail.HTMLBody = body  # String containing HTML for the email's body
+        # Set mail properties
+        mail.To = to  # String of recipient email addresses
+        mail.CC = cc  # String of CC email addresses
+        mail.Subject = CAMPUS + ": " + date_string + ": " + subject  # String for the email's subject
+        #mail.Body = body  # String for the email's body
+        # Set the email body to HTML
+        mail.HTMLBody = body  # String containing HTML for the email's body
 
-    # Send the email
-    mail.Send()
-    time.sleep(5)
+        # Send the email
+        mail.Send()
+        time.sleep(5)
+
+    except Exception as e:
+        print(f"An error occurred while sending the email (e.g., outlook is not running): {e}")
 
 def create_pdf_from_html(html, output_path):
     # Configuration for pdfkit to use wkhtmltopdf
@@ -185,7 +189,7 @@ def convert_date_format(date_str):
     return new_date_str
 
 def is_within_days(date_str, days):
-    date_object = datetime.strptime(date_str, '%d-%b-%y')
+    date_object = datetime.strptime(date_str, '%b %d, %Y')
     fourteen_days_ago = datetime.now() - timedelta(days=days)
     return date_object < fourteen_days_ago
 
@@ -306,7 +310,7 @@ def add_class_list_data(master_df, class_list_dir_path):
                 # Filter the DataFrame to only include rows where the role is 'student'
                 student_df = seventh_table_df[seventh_table_df['Role'] == 'Student']
                 # Print column names to see what they actually are
-                print("Column names:", student_df.columns.tolist())
+                #print("Column names:", student_df.columns.tolist())
                 #student_df = student_df.rename(columns={'First Name,\xa0Last Name': 'Student Full Name'})
                 student_df = student_df.rename(columns={'Last NameFirst Name': 'Student Full Name'})
                 #print(student_df)
@@ -407,8 +411,8 @@ def get_grades_data(grades_dir):
                     if column_to_rename:
                         # Only take the first matching column if there are multiple
                         grades_df_temp.rename(columns={column_to_rename[0]: 'Start Week'}, inplace=True)
-                    else:
-                        print("ERROR: No column found with the specified substring: Enrolment Start Week Points Grade: " + filename)
+                    #else:
+                        #print("ERROR: No column found with the specified substring: Enrolment Start Week Points Grade: " + filename)
 
                     #grades_df_temp.rename(columns={'Enrolment Start Week Points Grade <Numeric MaxPoints:39>': 'Start Week'}, inplace=True)
                     #print(grades_df_temp.dtypes)
@@ -534,7 +538,7 @@ def FindDupStudentsInBSViaClassList (BSdirectory):
             
     if (df_string != "") and (not sorted_duplicates.empty):
         # Print the non-unique elements sorted by 'Org Defined ID', without the index
-        print("Non-unique elements sorted by 'Org Defined ID':")
+        # print("Non-unique elements sorted by 'Org Defined ID':")
         print(sorted_duplicates.to_string(index=False))
         if SEND_EMAIL:
             if TESTING: 
@@ -542,7 +546,7 @@ def FindDupStudentsInBSViaClassList (BSdirectory):
 
             subject_email="Please check and remove duplicates in Brightspace classes"
             body_email="Hello Office, <br><br>" + \
-                "I ran a script today, and the following students are registered in one or more classes in BrightSpace (BS). Please check BS (Classlists) and remove duplicates. Thank you.<br><br>" \
+                "I ran a report today, and the following students are registered in one or more classes in BrightSpace (BS). Please check BS (Classlists) and remove duplicates. Thank you.<br><br>" \
                     + df_string + "<br><br>Sincerely, <br>Ramzan Khuwaja"
 
             send_email(to_email, cc_email, subject_email, body_email)
@@ -582,7 +586,7 @@ def FindDupStudentsInBSViaAttendanceGrades (target_dir, column_name):
 
     if not sorted_duplicates.empty:
         # Print the non-unique elements sorted by column_name, without the index
-        print("Non-unique elements sorted by " + column_name + ": ")
+        # print("Non-unique elements sorted by " + column_name + ": ")
         print(sorted_duplicates.to_string(index=False))
         
         df_string = sorted_duplicates.to_html(index=False)
@@ -592,7 +596,7 @@ def FindDupStudentsInBSViaAttendanceGrades (target_dir, column_name):
 
             subject_email="Please check and remove duplicates in Brightspace classes"
             body_email="Hello Office, <br><br>" + \
-                "I ran a script today, and the following students are registered in one or more classes in BrightSpace. Please check and remove duplicates. Thank you.<br><br>" \
+                "I ran a report today, and the following students are registered in one or more classes in BrightSpace. Please check and remove duplicates. Thank you.<br><br>" \
                     + df_string + "<br><br>Sincerely, <br>Ramzan Khuwaja"
 
             send_email(to_email, cc_email, subject_email, body_email)
@@ -789,7 +793,7 @@ def email_att_missing_to_stakeholders(df_missing_attendance):
             teacher = df1["Teacher Full Name"].iloc[0]
             teacher_email = email
 
-            df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Att Uptodate?", "Start Week"])
+            df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Att Uptodate?"])
 
             if TESTING: 
                 to = to_email
@@ -800,10 +804,9 @@ def email_att_missing_to_stakeholders(df_missing_attendance):
 
             subject_email="Please update your Brightspace class data"
             body_email="Hello " + teacher + ",<br><br>" + \
-                    "Spirit of Math advises parents and students to access their class attendance and marks within a week after a class is completed.  <br><br> Our records show that the following of your students/classes have not been updated for the past two weeks!  Please update ASAP and keep the above practice for the rest of this school year.  <br>" \
+                    "Spirit of Math advises parents and students to access their class attendance and marks within a week after a class is completed.  <br><br> Our records show that the following of your students/classes have not been updated for the past two weeks!  Please update ASAP and keep the above practice for the rest of this school year.  <br><br>" \
                         + "No need to respond to this email, just make the applicable corrections.  Thank you.<br><br>" \
-                        + df2.to_html(index=False) + "<br><br>Sincerely, <br>Ramzan Khuwaja<br><br>" \
-                        + "P.S. Start Week = -1 means you have not added the start week for this student in the Brightspace.  Please add, if missing.<br>"
+                        + df2.to_html(index=False) + "<br><br>Sincerely, <br>Ramzan Khuwaja<br><br>" 
 
             send_email(to, cc, subject_email, body_email)
 
@@ -821,11 +824,22 @@ def FindStrugglingStudents(campus):
 
     df_student_map = pd.read_csv(student_map_file)
 
+    # Check if 'Start Week' column exists
+    if 'Start Week' not in df_student_map.columns:
+        print("ERROR: 'Start Week' column not found in the student map file.")
+        return False
+
     df1 = df_student_map[df_student_map['Final Grade'] < GRADES_MIN_BAR]
     #print(df1)
 
-    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Final Grade", "Start Week"])
-    df2['Start Week'] = df2['Start Week'].astype(int)
+    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Final Grade"])
+    
+    # Ensure 'Start Week' column exists before attempting to convert
+    if 'Start Week' in df2.columns:
+        df2['Start Week'] = df2['Start Week'].astype(int)
+    else:
+        print("WARNING: 'Start Week' column is missing in the filtered DataFrame.")
+
     return df2
 
 def FindHighHonoursStudents(campus):
@@ -863,7 +877,7 @@ def FindNeedsToAttendMoreRegularly(campus):
     df1 = df_student_map[df_student_map['Attendance (%)'] < ATTENDANCE_MIN_BAR]
     #print(df1)
 
-    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Attendance (%)", "Start Week", "Parent Email"])
+    df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Teacher Email", "Teacher Full Name", "Attendance (%)", "Parent Email"])
     return df2
 
 
@@ -1013,7 +1027,7 @@ def export_students_to_attend_more_to_excel(df_remind_students, campus):
         # Specify the output path
         output_path = report_dir + date_string + ".xlsx"
 
-        df2 = pd.DataFrame(df_remind_students, columns=["Teacher Full Name", "Class Code", "Student Full Name", "Attendance (%)", "Start Week", "Parent Email"])
+        df2 = pd.DataFrame(df_remind_students, columns=["Teacher Full Name", "Class Code", "Student Full Name", "Attendance (%)", "Parent Email"])
 
         df2 = df2.sort_values(
             by=["Teacher Full Name", "Class Code", "Student Full Name", "Attendance (%)"], 

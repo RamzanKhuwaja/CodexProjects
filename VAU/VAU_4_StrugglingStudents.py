@@ -42,7 +42,7 @@ def email_struggling_students_to_stakeholders(df_struggling_students):
 
             subject_email="Intervention needed for students below 65%!"
             body_email="Hello " + teacher + ",<br><br>" + \
-                "The following students (see Brightspace for details) in your classes have scored, so far, less than 65% as their cumulative marks. These students can potentially dropout of our program if this situation continues.  We should be proactive to prevent this situation. <br><br>" + \
+                "The following students (see Brightspace for details) in your classes have scored, so far, less than 50% as their cumulative marks. These students can potentially dropout of our program if this situation continues.  We should be proactive to prevent this situation. <br><br>" + \
                 "Please work with Angela and Surbhi (copied above) to create a plan to increase their scores.<br><br>" + \
                 "Many of your students are doing well, so thank you for your effort! I will send a similar report to check progress in the next four weeks.  Thanks. <br><br>" \
                 + df2.to_html(index=False) + "<br><br>Ramzan Khuwaja<br><br>" \

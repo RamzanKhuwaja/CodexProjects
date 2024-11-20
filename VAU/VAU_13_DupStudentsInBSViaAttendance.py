@@ -10,7 +10,7 @@ def main():
         print("Exiting Check on VAU DupStudentsInBSViaAttendance.")
         return True
     else:
-        print("WARNING: Exiting Check on VAU DupStudentsInBSViaAttendance.")
+        print("Exiting Check on VAU DupStudentsInBSViaAttendance.")
         return False
 
 

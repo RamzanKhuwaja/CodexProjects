@@ -10,7 +10,7 @@ def main():
         print("Exiting Check on FindDupStudentsIn VAU BSViaClassList.")
         return True
     else:
-        print("WARNING: Exiting Check on FindDupStudentsIn VAU BSViaClassList.")
+        print("Exiting Check on FindDupStudentsIn VAU BSViaClassList.")
         return False
 
 
