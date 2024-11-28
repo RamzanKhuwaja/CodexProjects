@@ -31,7 +31,7 @@ def email_struggling_students_to_stakeholders(df_struggling_students):
             teacher = df1["Teacher Full Name"].iloc[0]
             teacher_email = email
 
-            df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Final Grade", "Start Week"])
+            df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Final Grade"])
 
             if utils.TESTING: 
                 to = utils.to_email
