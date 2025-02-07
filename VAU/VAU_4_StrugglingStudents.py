@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime
 import Common.my_utils as utils
+import openpyxl
 
 def main():
     utils.set_campus_info("VAU")
@@ -54,4 +55,3 @@ def email_struggling_students_to_stakeholders(df_struggling_students):
 
 if __name__ == "__main__":
     main()
-    

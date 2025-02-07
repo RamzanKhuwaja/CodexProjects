@@ -3,6 +3,7 @@ import re
 import time
 import numpy as np
 import pandas as pd
+import openpyxl
 from bs4 import BeautifulSoup
 from numpy import float64, int64
 import win32com.client as email_client
@@ -19,7 +20,7 @@ except ImportError:
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
 TESTING = True     #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-THIS_WEEK_NUM = 11 #  <======  Change this every week!!!!!!!!!!!!!!
+THIS_WEEK_NUM = 21 #  <======  Change this every week!!!!!!!!!!!!!
 SEND_EMAIL = True
 PRINT_REPORT = True
 SEND_SUMMARY = True
@@ -300,12 +301,16 @@ def add_class_list_data(master_df, class_list_dir_path):
     for filename in os.listdir(class_list_dir_path):
         if filename.endswith(".html"):
             # Read the HTML file
-            tables = pd.read_html(filename)
+            #tables = pd.read_html(filename)
+            tables = pd.read_html(filename, header=0)  # Use the first row as column headers
+            #print(tables)
+
 
             # Check if there are at least 7 tables
             if len(tables) >= 7:
                 # Assign the 7th table to a new DataFrame variable
                 seventh_table_df = tables[6]
+                #print(seventh_table_df)
 
                 # Filter the DataFrame to only include rows where the role is 'student'
                 student_df = seventh_table_df[seventh_table_df['Role'] == 'Student']
