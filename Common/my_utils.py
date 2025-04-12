@@ -18,14 +18,16 @@ except ImportError:
     print("To install, run: pip install pdfkit")
     pdfkit = None
 
+# Debug flag to control which paths to use
+#  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
+#   use only when doing a new run with 3 files only
+
+DEBUG = False  # Set to True to use debugging paths, False for production paths
 
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
-DEBUG = True      #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-                   #   use only when doing a new run with 3 files only
-
 TESTING = True    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-THIS_WEEK_NUM = 21 #  <======  Change this every week!!!!!!!!!!!!!
+THIS_WEEK_NUM = 28 #  <======  Change this every week!!!!!!!!!!!!!
 
 SEND_EMAIL = True
 PRINT_REPORT = True
