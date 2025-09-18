@@ -1,32 +1,44 @@
+import sys
+
 import VAU_11_CheckClassMap as check1
 import VAU_12_DupStudentsInBSViaClassList as check2
 import VAU_13_DupStudentsInBSViaAttendance as check3
 import VAU_14_DupStudentsInBSViaGrades as check4
 
-def main():
+
+CHECKS = [
+    ("VAU CheckClassMap", check1.main, "VAU ClassMap csv file"),
+    ("VAU DupStudentsInBSViaClassList", check2.main, "VAU ClassList directory"),
+    ("VAU DupStudentsInBSViaAttendance", check3.main, "VAU Attendance directory"),
+    ("VAU DupStudentsInBSViaGrades", check4.main, "VAU Grades directory"),
+]
+
+
+def main() -> bool:
     print("\n===========================================\n")
     print("Entering main - VAUCheckAllDups\n")
 
-    checks = [
-        ("VAU CheckClassMap", check1.main, "VAU ClassMap csv file"),
-        ("VAU DupStudentsInBSViaClassList", check2.main, "VAU ClassList directory"),
-        ("VAU DupStudentsInBSViaAttendance", check3.main, "VAU Attendance directory"),
-        ("VAU DupStudentsInBSViaGrades", check4.main, "VAU Grades directory")
-    ]
+    overall_success = True
 
-    for check_name, check_function, check_target in checks:
-        print(f"Entering {check_name}\n")
+    for name, func, target in CHECKS:
+        print(f"Entering {name}\n")
         try:
-            if check_function():
-                print(f"No duplicates found in the {check_target}.\n")
+            result = func()
+        except Exception as exc:  # noqa: BLE001
+            print(f"ERROR: {name} failed: {exc}\n")
+            overall_success = False
+        else:
+            if result:
+                print(f"No duplicates found in the {target}.\n")
             else:
-                print(f"Duplicates found! Please check {check_target}.\n")
-        except Exception as e:
-            print(f"An error occurred in {check_name}: {e}\n")
-        print(f"Exiting {check_name}\n")
+                print(f"Duplicates found! Please check {target}.\n")
+                overall_success = False
+        print(f"Exiting {name}\n")
 
-    print("Exiting main - VAUCheckAllDups\n") 
+    print("Exiting main - VAUCheckAllDups\n")
     print("===========================================\n")
+    return overall_success
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(0 if main() else 1)

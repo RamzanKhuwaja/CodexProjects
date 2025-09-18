@@ -1,19 +1,32 @@
+import sys
 
 import Common.my_utils as utils
 
-def main():
+CAMPUS = "MAE"
+ATTENDANCE_DIR = getattr(utils, "MAE_ATTENDANCE_DIR")
+COLUMN_NAME = "Org Defined ID"
 
-    utils.set_campus_info("MAE")
 
-    print("Entering Check to MAE DupStudentsInBSViaAttendance.")
-    
-    if utils.FindDupStudentsInBSViaAttendanceGrades (utils.MAE_ATTENDANCE_DIR, "Org Defined ID"):
-        print("Exiting Check on MAE DupStudentsInBSViaAttendance.")
-        return True
-    else:
-        print("WARNING: Exiting Check on MAE DupStudentsInBSViaAttendance.")
+def main() -> bool:
+    try:
+        utils.set_campus_info(CAMPUS)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: Unable to set campus info for {CAMPUS}: {exc}")
         return False
+
+    print(f"Entering {CAMPUS} DupStudentsInBSViaAttendance.")
+    try:
+        result = utils.FindDupStudentsInBSViaAttendanceGrades(ATTENDANCE_DIR, COLUMN_NAME)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: FindDupStudentsInBSViaAttendanceGrades crashed for {ATTENDANCE_DIR}: {exc}")
+        return False
+
+    if result:
+        print(f"Exiting {CAMPUS} DupStudentsInBSViaAttendance.")
+    else:
+        print(f"WARNING: Exiting {CAMPUS} DupStudentsInBSViaAttendance.")
+    return result
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(0 if main() else 1)

@@ -1,56 +1,91 @@
-import pandas as pd
-from datetime import datetime
+import sys
+
 import Common.my_utils as utils
 
-def main():
-    utils.set_campus_info("MAE")
+CAMPUS = "MAE"
+EMAIL_COLUMNS = [
+    "Org Defined ID",
+    "Student Full Name",
+    "Class Code",
+    "Final Grade",
+]
 
-    print("Entering MAE StrugglingStudents")
-        
-    df_struggling_students = utils.FindStrugglingStudents("MAE")
 
-    if df_struggling_students.empty:
-        print("No struggling students - Exiting MAE StrugglingStudents")
+def email_struggling_students_to_stakeholders(df_struggling_students) -> bool:
+    if df_struggling_students is None or df_struggling_students.empty:
         return True
-    else:
-        email_struggling_students_to_stakeholders(df_struggling_students)
-        utils.export_struggling_students_to_excel(df_struggling_students, "MAE")
 
-        print("ERROR: Found struggling students - Exiting MAE StrugglingStudents")
+    missing_cols = [col for col in EMAIL_COLUMNS + ['Teacher Email', 'Teacher Full Name'] if col not in df_struggling_students.columns]
+    if missing_cols:
+        if hasattr(utils, 'warn_once'):
+            utils.warn_once('WARNING', f"Missing columns {missing_cols} in struggling students report; email not sent")
+        else:
+            print(f"WARNING: Missing columns {missing_cols} in struggling students report; email not sent")
         return False
 
-def email_struggling_students_to_stakeholders(df_struggling_students):
-    print("Start - email_to_stakeholders")
-    teacher_email = ""
+    if not utils.SEND_EMAIL:
+        print('INFO: SEND_EMAIL disabled; skipping struggling student emails.')
+        return True
 
-    if utils.SEND_EMAIL:
+    all_success = True
+    for email in df_struggling_students['Teacher Email'].dropna().unique():
+        df_teacher = df_struggling_students[df_struggling_students['Teacher Email'] == email]
+        if df_teacher.empty:
+            continue
 
-        for email in df_struggling_students['Teacher Email'].unique():
-            df1 = df_struggling_students[df_struggling_students['Teacher Email'] == email]
+        teacher_name = df_teacher['Teacher Full Name'].iloc[0]
+        payload = df_teacher[EMAIL_COLUMNS].copy()
 
-            teacher = df1["Teacher Full Name"].iloc[0]
-            teacher_email = email
+        if utils.TESTING:
+            to = utils.to_email
+            cc = ''
+        else:
+            to = email
+            cc = utils.cc_email
 
-            df2 = pd.DataFrame(df1, columns=["Org Defined ID", "Student Full Name", "Class Code", "Final Grade"])
+        subject_email = 'Intervention needed for students below performance threshold'
+        body_email = (
+            f"Hello {teacher_name},<br><br>"
+            'The following students currently have a cumulative grade below our threshold. '
+            'Please review their progress and engage with the office team to plan next steps.<br><br>'
+            f"{payload.to_html(index=False)}<br><br>"
+            'Many of your students are doing well; thank you for your efforts.<br><br>'
+            'Ramzan Khuwaja'
+        )
 
-            if utils.TESTING: 
-                to = utils.to_email
-                cc = ""
-            else:
-                to = teacher_email
-                cc = utils.cc_email
+        if not utils.send_email(to, cc, subject_email, body_email):
+            all_success = False
+    return all_success
 
-            subject_email="Intervention needed for students below 50%!"
-            body_email="Hello " + teacher + ",<br><br>" + \
-                "The following students (see Brightspace for details) in your classes have scored, so far, less than 50% as their cumulative marks. These students can potentially dropout of our program if this situation continues.  We should be proactive to prevent this situation. <br><br>" + \
-                "Please work with Mrs. Lisa Chiu (copied above) to create a plan to increase their scores.<br><br>" + \
-                "Many of your students are doing well, so thank you for your effort! I will send a similar report to check progress in the next four weeks.  Thanks. <br><br>" \
-                + df2.to_html(index=False) + "<br><br>Ramzan Khuwaja<br><br>" \
-                + "P.S. Some cases might be obvious, i.e., late joining, absenteeism, student transfer and grades missing.  Please focus first on students who actually need immediate attention."
 
-            utils.send_email(to, cc, subject_email, body_email)
+def main() -> bool:
+    print(f"Entering {CAMPUS} StrugglingStudents")
+    try:
+        utils.set_campus_info(CAMPUS)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: Unable to set campus info for {CAMPUS}: {exc}")
+        return False
+
+    try:
+        df_struggling_students = utils.FindStrugglingStudents(CAMPUS)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: FindStrugglingStudents failed for {CAMPUS}: {exc}")
+        return False
+
+    if df_struggling_students is None or df_struggling_students.empty:
+        print(f"No struggling students - Exiting {CAMPUS} StrugglingStudents")
+        return True
+
+    emails_ok = email_struggling_students_to_stakeholders(df_struggling_students)
+    export_ok = utils.export_struggling_students_to_excel(df_struggling_students, CAMPUS)
+
+    if not emails_ok or not export_ok:
+        print(f"ERROR: Unable to process struggling students for {CAMPUS}.")
+        return False
+
+    print(f"WARNING: Found struggling students - Exiting {CAMPUS} StrugglingStudents")
+    return False
 
 
 if __name__ == "__main__":
-    main()
-    
+    sys.exit(0 if main() else 1)

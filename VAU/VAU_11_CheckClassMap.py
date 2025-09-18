@@ -1,15 +1,31 @@
+import sys
+
 import Common.my_utils as utils
 
-def main():
-    utils.set_campus_info("VAU")
-    print("Entering Check on VAU_CLASS_MAP_FILE.")
-    if utils.check_class_map(utils.VAU_CLASS_MAP_FILE):
-        print("Exiting Check on VAU_CLASS_MAP_FILE.")
-        return True
-    else:
-        print("ERROR: Exiting Check on VAU_CLASS_MAP_FILE.")
+CAMPUS = "VAU"
+CLASS_MAP_PATH = getattr(utils, "VAU_CLASS_MAP_FILE")
+
+
+def main() -> bool:
+    print(f"Entering Check on {CAMPUS}_CLASS_MAP_FILE.")
+    try:
+        utils.set_campus_info(CAMPUS)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: Unable to set campus info for {CAMPUS}: {exc}")
         return False
-    
-    
+
+    try:
+        success = utils.check_class_map(CLASS_MAP_PATH)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: check_class_map failed for {CLASS_MAP_PATH}: {exc}")
+        return False
+
+    if success:
+        print(f"Exiting Check on {CAMPUS}_CLASS_MAP_FILE.")
+    else:
+        print(f"ERROR: Exiting Check on {CAMPUS}_CLASS_MAP_FILE.")
+    return success
+
+
 if __name__ == "__main__":
-    main()
+    sys.exit(0 if main() else 1)

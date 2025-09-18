@@ -1,23 +1,36 @@
-import pandas as pd
-from datetime import datetime
+import sys
+
 import Common.my_utils as utils
 
-def main():
-    utils.set_campus_info("MAE")
+CAMPUS = "MAE"
 
-    print("Entering MAE HighHonoursStudents")
-        
-    df_high_honours_students = utils.FindHighHonoursStudents("MAE")
 
-    if df_high_honours_students.empty:
-        print("Exiting MAE HighHonoursStudents - no student found!")
-        return True
-    else:
-        utils.export_high_honours_students_to_excel(df_high_honours_students, "MAE")
-
-        print("Exiting MAE HighHonoursStudents")
+def main() -> bool:
+    print(f"Entering {CAMPUS} HighHonoursStudents")
+    try:
+        utils.set_campus_info(CAMPUS)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: Unable to set campus info for {CAMPUS}: {exc}")
         return False
+
+    try:
+        df_high = utils.FindHighHonoursStudents(CAMPUS)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: FindHighHonoursStudents failed for {CAMPUS}: {exc}")
+        return False
+
+    if df_high is None or df_high.empty:
+        print(f"No high honours students - Exiting {CAMPUS} HighHonoursStudents")
+        return True
+
+    export_ok = utils.export_high_honours_students_to_excel(df_high, CAMPUS)
+    if not export_ok:
+        print(f"ERROR: Unable to export high honours report for {CAMPUS}.")
+        return False
+
+    print(f"SUCCESS: Exported high honours report for {CAMPUS}")
+    return True
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(0 if main() else 1)

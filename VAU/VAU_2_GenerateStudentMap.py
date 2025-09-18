@@ -1,20 +1,30 @@
+import sys
+
 import Common.my_utils as utils
 
-def main():
-    utils.set_campus_info("VAU")
+CAMPUS = "VAU"
 
-    print("Entering VAU GenerateStudentMap")
-    
+
+def main() -> bool:
+    print(f"Entering {CAMPUS} GenerateStudentMap")
     try:
-        if utils.GenerateStudentMap("VAU"):
-            print("Exiting VAU GenerateStudentMap")
-            return True
-        else:
-            print("ERROR: Exiting VAU GenerateStudentMap")
-            return False
-    except Exception as e:
-        print(f"An error occurred during GenerateStudentMap: {e}")
+        utils.set_campus_info(CAMPUS)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: Unable to set campus info for {CAMPUS}: {exc}")
         return False
 
+    try:
+        success = utils.GenerateStudentMap(CAMPUS)
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: GenerateStudentMap crashed for {CAMPUS}: {exc}")
+        return False
+
+    if success:
+        print(f"Exiting {CAMPUS} GenerateStudentMap")
+    else:
+        print(f"ERROR: Exiting {CAMPUS} GenerateStudentMap")
+    return success
+
+
 if __name__ == "__main__":
-    main()
+    sys.exit(0 if main() else 1)
