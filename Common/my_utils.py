@@ -38,32 +38,33 @@ NOT_LOGGED_IN_SINCE = int(14) # Not logged in since last 2 weeks!
 ATTENDANCE_MIN_BAR = int(80) # Min attendance required (in %)
 
 
+# Resolve project root (two levels up from this file: ProgressMonitoring)
+_THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+_PROJ_ROOT = os.path.abspath(os.path.join(_THIS_DIR, os.pardir, os.pardir))
+
+# File locations relative to project root to avoid hardcoded absolute paths
+VAU_CLASS_MAP_FILE  = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'VAUClassMap2024-25.csv')
+MAE_CLASS_MAP_FILE  = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'MAEClassMap2024-25.csv')
+VAU_STUDENT_MAP_FILE = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'VAUStudentMap2024-25.csv')
+MAE_STUDENT_MAP_FILE = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'MAEStudentMap2024-25.csv')
+
 if DEBUG:
-    VAU_CLASS_MAP_FILE  = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\VAUClassMap2024-25.csv'
-    MAE_CLASS_MAP_FILE  = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\MAEClassMap2024-25.csv'
-    VAU_STUDENT_MAP_FILE = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\VAUStudentMap2024-25.csv'
-    MAE_STUDENT_MAP_FILE = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\MAEStudentMap2024-25.csv'
-    VAU_ATTENDANCE_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\Debugging\VAU\Attendance'
-    MAE_ATTENDANCE_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\Debugging\MAE\Attendance'
-    VAU_CLASS_LIST_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\Debugging\VAU\ClassList'
-    MAE_CLASS_LIST_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\Debugging\MAE\ClassList'
-    VAU_GRADES_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\Debugging\VAU\Grades'
-    MAE_GRADES_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\Debugging\MAE\Grades'
-    VAU_REPORT_DIRECTORY = r"C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Ready For Printing\VAU"
-    MAE_REPORT_DIRECTORY = r"C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Ready For Printing\MAE"
+    VAU_ATTENDANCE_DIR = os.path.join(_PROJ_ROOT, 'Data', 'Debugging', 'VAU', 'Attendance')
+    MAE_ATTENDANCE_DIR = os.path.join(_PROJ_ROOT, 'Data', 'Debugging', 'MAE', 'Attendance')
+    VAU_CLASS_LIST_DIR = os.path.join(_PROJ_ROOT, 'Data', 'Debugging', 'VAU', 'ClassList')
+    MAE_CLASS_LIST_DIR = os.path.join(_PROJ_ROOT, 'Data', 'Debugging', 'MAE', 'ClassList')
+    VAU_GRADES_DIR = os.path.join(_PROJ_ROOT, 'Data', 'Debugging', 'VAU', 'Grades')
+    MAE_GRADES_DIR = os.path.join(_PROJ_ROOT, 'Data', 'Debugging', 'MAE', 'Grades')
 else:
-    VAU_CLASS_MAP_FILE  = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\VAUClassMap2024-25.csv'
-    MAE_CLASS_MAP_FILE  = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\MAEClassMap2024-25.csv'
-    VAU_STUDENT_MAP_FILE = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\VAUStudentMap2024-25.csv'
-    MAE_STUDENT_MAP_FILE = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Code\Common\MAEStudentMap2024-25.csv'
-    VAU_ATTENDANCE_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\VAU\Attendance'
-    MAE_ATTENDANCE_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\MAE\Attendance'
-    VAU_CLASS_LIST_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\VAU\ClassList'
-    MAE_CLASS_LIST_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\MAE\ClassList'
-    VAU_GRADES_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\VAU\Grades'
-    MAE_GRADES_DIR = r'C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Data\MAE\Grades'
-    VAU_REPORT_DIRECTORY = r"C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Ready For Printing\VAU"
-    MAE_REPORT_DIRECTORY = r"C:\Users\ramza\My Drive\Frequent Files\Fun Projects\ProgressMonitoring\Ready For Printing\MAE"
+    VAU_ATTENDANCE_DIR = os.path.join(_PROJ_ROOT, 'Data', 'VAU', 'Attendance')
+    MAE_ATTENDANCE_DIR = os.path.join(_PROJ_ROOT, 'Data', 'MAE', 'Attendance')
+    VAU_CLASS_LIST_DIR = os.path.join(_PROJ_ROOT, 'Data', 'VAU', 'ClassList')
+    MAE_CLASS_LIST_DIR = os.path.join(_PROJ_ROOT, 'Data', 'MAE', 'ClassList')
+    VAU_GRADES_DIR = os.path.join(_PROJ_ROOT, 'Data', 'VAU', 'Grades')
+    MAE_GRADES_DIR = os.path.join(_PROJ_ROOT, 'Data', 'MAE', 'Grades')
+
+VAU_REPORT_DIRECTORY = os.path.join(_PROJ_ROOT, 'Ready For Printing', 'VAU')
+MAE_REPORT_DIRECTORY = os.path.join(_PROJ_ROOT, 'Ready For Printing', 'MAE')
 
 # Ensure the directory exists else create one
 #os.makedirs(os.path.dirname(output_path), exist_ok=True)
