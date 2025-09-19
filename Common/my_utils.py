@@ -19,74 +19,26 @@ except ImportError:
     pdfkit = None
 
 # Debug flag to control which paths to use
-
-
-
 #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-
-
-
 #   use only when doing a new run with 3 files only
-
-
-
-
-
-
-
-DEBUG = False  # Set to True to use debugging paths, False for production paths
-
-
-
-
-
-
-
-CAMPUS = to_email = cc_email = body_email = subject_email = ""
-
-
-
-
-
-
-
+DEBUG = False  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
+              # Set to True to use debugging paths, False for production paths
 TESTING = True    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-
-
-
+                  #  This is NOR DEBUGGING!  This uses all data before sending to teachers
 THIS_WEEK_NUM = 28 #  <======  Change this every week!!!!!!!!!!!!!
 
-
-
-
-
-
-
 SEND_EMAIL = True
-
-
-
 PRINT_REPORT = True
 
 
-
-SEND_SUMMARY = True
-
-
+# ======  Following Don't Change Often!
 
 GRADES_MIN_BAR = int(50) # Scoring less than 50%!
-
-
-
 HIGH_HONOURS_MIN_BAR = int(90) # Scoring 90% or higher!
-
-
-
 NOT_LOGGED_IN_SINCE = int(14) # Not logged in since last 2 weeks!
-
-
-
 ATTENDANCE_MIN_BAR = int(80) # Min attendance required (in %)
+
+CAMPUS = to_email = cc_email = body_email = subject_email = ""
 
 SUPPORTED_DATE_FORMATS = [
     "%b %d, %Y %I:%M %p",
@@ -384,90 +336,28 @@ def check_duplicates_in_column(df, column_name):
 
 
 
-def check_class_map (ClassMap):
-
-
-
+def check_class_map(class_map: str) -> bool:
+    directory = os.path.dirname(os.path.abspath(class_map))
+    print(f"Processing files in directory: {directory}")
+    print(f"Processing class map file: {class_map}")
     try:
-
-
-
-        df = pd.read_csv(ClassMap)
-
-
-
-
-
-
-
-        columns_to_check = ['Class Code', 'Attendance', 'Grades', 'ClassList']
-
-
-
-        for column in columns_to_check:
-
-
-
-            if column in df.columns:
-
-
-
-                check_duplicates_in_column(df, column)
-
-
-
-            else:
-
-
-
-                print(f"Column '{column}' not found in the CSV file.")
-
-
-
-        return True
-
-
-
-
-
-
-
+        df = pd.read_csv(class_map)
     except FileNotFoundError:
-
-
-
-        print(f"File not found: {ClassMap}")
-
-
-
+        print(f"File not found: {class_map}")
+        return False
+    except Exception as exc:  # noqa: BLE001
+        print(f"An error occurred: {exc}")
         return False
 
+    columns_to_check = ['Class Code', 'Attendance', 'Grades', 'ClassList']
+    for column in columns_to_check:
+        if column in df.columns:
+            check_duplicates_in_column(df, column)
+        else:
+            print(f"Column '{column}' not found in the CSV file.")
 
-
-    except Exception as e:
-
-
-
-        print(f"An error occurred: {e}")
-
-
-
-        return False
-
-
-
-
-
-
-
-
-
-
-
-# Function to strip leading '#' or '#0' from a string
-
-
-
+    print('Processed 1 file successfully')
+    return True
 def strip_hash(input_string):
 
 
@@ -977,11 +867,36 @@ def add_class_list_data(master_df: pd.DataFrame, class_list_dir_path: str) -> pd
             print(f"WARNING: Failed to read tables from '{filename}': {exc}")
             continue
 
+        target_columns = ("org defined id", "orgdefinedid", "username")
+
         student_table = None
         for table in tables:
-            table.columns = [str(col) for col in table.columns]
+            table = table.dropna(axis=1, how='all')
+            table = table.dropna(how='all')
+            if table.empty:
+                continue
+
+            table.columns = [str(col).strip() for col in table.columns]
             normalized_columns = [normalize(col) for col in table.columns]
-            if any(keyword in normalized_columns for keyword in ("org defined id", "orgdefinedid", "username")):
+
+            if not any(keyword in normalized_columns for keyword in target_columns):
+                header_index = None
+                for idx, row in table.iterrows():
+                    normalized_row = [normalize(value) for value in row]
+                    if any(keyword in value for value in normalized_row for keyword in target_columns):
+                        header_index = idx
+                        header_values = [str(value).strip() for value in row]
+                        break
+                if header_index is not None:
+                    table = table.iloc[header_index + 1:].reset_index(drop=True)
+                    table.columns = header_values
+                    normalized_columns = [normalize(col) for col in table.columns]
+
+            if any(keyword in normalized_columns for keyword in target_columns):
+                if table.empty:
+                    continue
+                if not any('role' in col for col in normalized_columns):
+                    continue
                 student_table = table
                 break
 
@@ -1021,7 +936,7 @@ def add_class_list_data(master_df: pd.DataFrame, class_list_dir_path: str) -> pd
             continue
 
         student_data = pd.DataFrame({
-            'Org Defined ID': student_rows[id_col].astype(str).str.extract(r"(\\d+)", expand=False),
+            'Org Defined ID': student_rows[id_col].astype(str).str.extract(r'(\d+)', expand=False),
             'Student Full Name': name_series,
             'Last Accessed': student_rows[last_accessed_col],
             'Class Code': class_code
@@ -1074,7 +989,7 @@ def get_attendance_data(attendance_dir: str) -> pd.DataFrame:
             warn_once("WARNING", f"Skipping '{filename}' - no Org Defined ID column found")
             continue
 
-        df['Org Defined ID'] = df[id_col].astype(str).str.extract(r"(\\d+)", expand=False)
+        df['Org Defined ID'] = df[id_col].astype(str).str.extract(r"(\d+)", expand=False)
         df = df.dropna(subset=['Org Defined ID'])
         if df.empty:
             warn_once("WARNING", f"No valid Org Defined ID entries in '{filename}'")
@@ -1131,7 +1046,7 @@ def get_grades_data(grades_dir: str) -> pd.DataFrame:
             warn_once("WARNING", f"Skipping '{filename}' - no OrgDefinedId column found")
             continue
 
-        df['OrgDefinedId'] = df[id_col].astype(str).str.extract(r"(\\d+)", expand=False)
+        df['OrgDefinedId'] = df[id_col].astype(str).str.extract(r"(\d+)", expand=False)
         df = df.dropna(subset=['OrgDefinedId'])
         if df.empty:
             warn_once("WARNING", f"No valid OrgDefinedId entries in '{filename}'")
@@ -1232,62 +1147,78 @@ def FindDupStudentsInBSViaClassList(BSdirectory: str) -> bool:
     return True
 
 
+
 def FindDupStudentsInBSViaAttendanceGrades(target_dir: str, column_name: str) -> bool:
     if not target_dir or not os.path.exists(target_dir):
         print(f"Directory not found: {target_dir}")
         return True
 
+    print(f"Processing files in directory: {target_dir}")
+
     csv_files = sorted(f for f in glob.glob(os.path.join(target_dir, '*.csv')) if os.path.isfile(f))
     if not csv_files:
+        print('Processed 0 files successfully')
         print(f"No CSV files found in directory: {target_dir}")
         return True
 
     records: list[pd.DataFrame] = []
+    processed_count = 0
 
     for filename in csv_files:
         file_path = os.path.join(target_dir, os.path.basename(filename))
         try:
             df = pd.read_csv(file_path)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             print(f"WARNING: Error reading '{file_path}': {exc}")
             continue
 
-        id_col = column_name if column_name in df.columns else find_first_matching_column(df, ("orgdefinedid", "org defined id", "student id", "username"))
+        processed_this_file = False
+        id_col = column_name if column_name in df.columns else find_first_matching_column(df, ('orgdefinedid', 'org defined id', 'student id', 'username'))
 
         if id_col is None:
-            # Attempt fallback parsing for headerless exports
             try:
                 raw = pd.read_csv(file_path, header=None)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 print(f"WARNING: Unable to parse '{file_path}' without headers: {exc}")
                 continue
 
             extracted_rows = []
             for value in raw.iloc[:, 0].astype(str):
-                match = re.search(r"(\d+)", value)
+                match = re.search(r'(\d+)', value)
                 if match:
                     extracted_rows.append({column_name: match.group(0), 'File Name': os.path.basename(filename)})
             if extracted_rows:
                 records.append(pd.DataFrame(extracted_rows))
+                processed_this_file = True
+
+            if processed_this_file:
+                processed_count += 1
             continue
 
-        df[column_name] = df[id_col].astype(str).str.extract(r"(\\d+)", expand=False)
+        df[column_name] = df[id_col].astype(str).str.extract(r'(\d+)', expand=False)
         df = df.dropna(subset=[column_name])
         if df.empty:
-            warn_once("WARNING", f"No valid student identifiers in '{file_path}'")
+            warn_once('WARNING', f"No valid student identifiers in '{file_path}'")
             continue
 
-        first_name_col = find_first_matching_column(df, ("first name",))
-        last_name_col = find_first_matching_column(df, ("last name",))
+        first_name_col = find_first_matching_column(df, ('first name',))
+        last_name_col = find_first_matching_column(df, ('last name',))
 
         if first_name_col and last_name_col:
             df['Student Name'] = (df[first_name_col].astype(str).fillna('') + ' ' + df[last_name_col].astype(str).fillna('')).str.strip()
         else:
-            name_col = find_first_matching_column(df, ("student full name", "name", "full name"))
+            name_col = find_first_matching_column(df, ('student full name', 'name', 'full name'))
             df['Student Name'] = df[name_col] if name_col else ''
 
         df['File Name'] = os.path.basename(filename)
         records.append(df[[column_name, 'Student Name', 'File Name']])
+        processed_this_file = True
+
+        if processed_this_file:
+            processed_count += 1
+
+    print()
+    print(f"Processed {processed_count} files successfully")
 
     if not records:
         print(f"No files with required columns found in directory: {target_dir}")
@@ -1297,11 +1228,11 @@ def FindDupStudentsInBSViaAttendanceGrades(target_dir: str, column_name: str) ->
     duplicates = combined_df[combined_df.duplicated(subset=column_name, keep=False)]
 
     if duplicates.empty:
-        print("No duplicates found in Brightspace classes - checked via Attendance or Grades")
+        print('No duplicates found in Brightspace classes - checked via Attendance or Grades')
         return True
 
     print()
-    print("Found duplicate student IDs:")
+    print('Found duplicate student IDs:')
     print(duplicates.sort_values(by=column_name).to_string(index=False))
 
     if SEND_EMAIL:
@@ -1316,13 +1247,13 @@ def FindDupStudentsInBSViaAttendanceGrades(target_dir: str, column_name: str) ->
         subject_email = "Please check and remove duplicates in Brightspace classes"
         body_email = (
             "Hello Office, <br><br>"
-            "I ran a report today, and the following students are registered in one or more classes in BrightSpace. "            "Please check and remove duplicates. Thank you.<br><br>"
+            "I ran a report today, and the following students are registered in one or more classes in BrightSpace. "
+            "Please check and remove duplicates. Thank you.<br><br>"
             f"{df_string}<br><br>Sincerely, <br>Ramzan Khuwaja"
         )
         send_email(to, cc, subject_email, body_email)
 
     return False
-
 
 def GenerateStudentMap(campus):
     """Generate student map by combining data from various sources."""
@@ -1450,6 +1381,21 @@ def GenerateStudentMap(campus):
         warn_once("WARNING", "Attendance data unavailable")
 
     lesson_available = not attendance_df.empty and lesson_col in attendance_df.columns
+    student_ids = {str(x).strip() for x in StudentMap['Org Defined ID'].dropna() if str(x).strip()} 
+    attendance_ids = set(attendance_lookup.keys()) if attendance_lookup else set()
+
+    if attendance_ids:
+        missing_students = student_ids - attendance_ids
+        extra_attendance = attendance_ids - student_ids
+
+        if missing_students:
+            sample_missing = sorted(missing_students)[:5]
+            warn_once("WARNING", f"{len(missing_students)} students missing attendance entries (e.g., {sample_missing})")
+
+        if extra_attendance:
+            sample_extra = sorted(extra_attendance)[:5]
+            warn_once("WARNING", f"{len(extra_attendance)} attendance records have unknown student IDs (e.g., {sample_extra})")
+
 
     print()
     print("Start - Copying attendance data")
@@ -1492,6 +1438,20 @@ def GenerateStudentMap(campus):
     else:
         warn_once("WARNING", "Grade data unavailable")
 
+    grade_ids = set(grade_lookup.keys()) if grade_lookup else set()
+
+    if grade_ids:
+        missing_grades = student_ids - grade_ids
+        extra_grades = grade_ids - student_ids
+
+        if missing_grades:
+            sample_missing = sorted(missing_grades)[:5]
+            warn_once("WARNING", f"{len(missing_grades)} students missing grade entries (e.g., {sample_missing})")
+
+        if extra_grades:
+            sample_extra = sorted(extra_grades)[:5]
+            warn_once("WARNING", f"{len(extra_grades)} grade records have unknown student IDs (e.g., {sample_extra})")
+
     print()
     print("Start - Copying grade data")
     grade_matches = 0
@@ -1515,7 +1475,12 @@ def GenerateStudentMap(campus):
     StudentMap['Attendance (%)'] = pd.to_numeric(StudentMap['Attendance (%)'], errors='coerce')
     StudentMap['Final Grade'] = pd.to_numeric(StudentMap['Final Grade'], errors='coerce')
     StudentMap['Start Week'] = pd.to_numeric(StudentMap['Start Week'], errors='coerce').fillna(-1).astype('int64')
-    StudentMap['Att Uptodate?'] = StudentMap['Att Uptodate?'].fillna(False).astype(bool)
+    StudentMap['Att Uptodate?'] = (
+        StudentMap['Att Uptodate?']
+        .astype('boolean')
+        .fillna(False)
+        .astype(bool)
+    )
 
     print("Start - Saving student map")
     try:
@@ -1538,6 +1503,10 @@ def GenerateStudentMap(campus):
 
     if missing_data:
         warn_once("WARNING", f"Missing data in columns: {', '.join(missing_data)}")
+        for column in missing_data:
+            missing_ids = StudentMap.loc[StudentMap[column].isna(), 'Org Defined ID'].dropna().astype(str)
+            sample_ids = sorted({id_.strip() for id_ in missing_ids if id_.strip()})[:5]
+            print(f"WARNING: {column} missing for {len(missing_ids)} students (e.g., {sample_ids})")
 
     return True
 
@@ -2014,13 +1983,16 @@ def SummaryOfStrugglingStudents(output_path):
     df_student_map['Final Grade'] = pd.to_numeric(df_student_map['Final Grade'], errors='coerce').fillna(0)
 
     try:
-        result = df_student_map.groupby('Teacher Full Name').apply(calculate_ranges).reset_index()
+        result = df_student_map.groupby('Teacher Full Name').apply(
+            calculate_ranges,
+            include_groups=False,
+        ).reset_index()
     except Exception as exc:
         print(f"ERROR: Failed to aggregate struggling student summary: {exc}")
         return pd.DataFrame()
 
     result_sorted = result.sort_values(by='Total Students', ascending=False) if 'Total Students' in result.columns else result
-    blank_row = pd.DataFrame(np.nan, index=[0], columns=result_sorted.columns)
+    blank_row = pd.DataFrame('', index=[0], columns=result_sorted.columns)
     totals = result_sorted.sum(numeric_only=True)
     totals_df = pd.DataFrame([["TOTAL"] + totals.tolist()], columns=result_sorted.columns)
     result_with_summary = pd.concat([result_sorted, blank_row, totals_df], ignore_index=True)
@@ -2100,6 +2072,9 @@ def calculate_ranges(group):
 
 
     return pd.Series(counts + [total_students], index=column_names + ['Total Students'])
+
+
+
 
 
 

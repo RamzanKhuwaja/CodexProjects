@@ -1,9 +1,9 @@
 import sys
 
-import MAE_11_CheckClassMap as check1
-import MAE_12_DupStudentsInBSViaClassList as check2
-import MAE_13_DupStudentsInBSViaAttendance as check3
-import MAE_14_DupStudentsInBSViaGrades as check4
+import MAE.MAE_11_CheckClassMap as check1
+import MAE.MAE_12_DupStudentsInBSViaClassList as check2
+import MAE.MAE_13_DupStudentsInBSViaAttendance as check3
+import MAE.MAE_14_DupStudentsInBSViaGrades as check4
 
 
 CHECKS = [

@@ -59,7 +59,7 @@
   - `TESTING` reroutes all outbound emails to campus lead (`to_email`) and suppresses CCs.
   - `SEND_EMAIL`, `PRINT_REPORT`, `SEND_SUMMARY` gate side-effects.
 - Threshold constants (`GRADES_MIN_BAR`, `HIGH_HONOURS_MIN_BAR`, `NOT_LOGGED_IN_SINCE`, `ATTENDANCE_MIN_BAR`) drive filters; adjust here for policy changes.
-- Requires Python environment with `pandas`, `numpy`, `openpyxl`, `beautifulsoup4`, `pdfkit`, and Windows Outlook client for email automation.
+- Requires Python environment with `pandas`, `numpy`, `openpyxl`, `beautifulsoup4`, `lxml`, `pdfkit`, and Windows Outlook client for email automation.
 - `pdfkit` additionally relies on a system-level `wkhtmltopdf` binary.
 
 ## Short-Term Priorities (next 1-2 weeks)
