@@ -1,8 +1,10 @@
 import os
 import re
 import time
+import csv
 from datetime import datetime, timedelta
-from typing import Iterable, Optional, Sequence
+from pathlib import Path
+from typing import Iterable, Mapping, Optional, Sequence
 
 import glob
 import numpy as np
@@ -27,8 +29,8 @@ TESTING = True    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
                   #  This is NOR DEBUGGING!  This uses all data before sending to teachers
 THIS_WEEK_NUM = 28 #  <======  Change this every week!!!!!!!!!!!!!
 
-SEND_EMAIL = True
-PRINT_REPORT = True
+SEND_EMAIL = False
+PRINT_REPORT = False
 
 
 # ======  Following Don't Change Often!
@@ -213,6 +215,112 @@ else:
 
 
     MAE_GRADES_DIR = os.path.join(_PROJ_ROOT, 'Data', 'MAE', 'Grades')
+def _download_list_files(folder: Path) -> list[Path]:
+    folder_path = Path(folder)
+    return [item for item in folder_path.iterdir() if item.is_file()]
+
+
+def _download_issue(message: str, potential: str) -> str:
+    return (
+        f"Issue: {message}. "
+        f"Potential issue with data download: {potential}."
+    )
+
+
+def _download_folder_issues(
+    name: str,
+    folder: Path,
+    expected_count: int,
+    expected_suffix: str,
+) -> Iterable[str]:
+    if not folder.exists():
+        yield _download_issue(
+            f"Missing folder '{name}'",
+            "The download step may have been skipped or saved to a different location",
+        )
+        return
+
+    files = _download_list_files(folder)
+    actual_count = len(files)
+    if actual_count != expected_count:
+        yield _download_issue(
+            (
+                f"Folder '{name}' contains {actual_count} files but "
+                f"expected {expected_count}"
+            ),
+            "Some class exports might not have been downloaded",
+        )
+
+    invalid = [path.name for path in files if path.suffix.lower() != expected_suffix]
+    if invalid:
+        display = ", ".join(sorted(invalid))
+        yield _download_issue(
+            (
+                f"Folder '{name}' has files with unexpected extensions: "
+                f"{display}"
+            ),
+            "Files may have been exported or renamed in the wrong format",
+        )
+
+
+def count_class_codes(class_map_file: str | Path) -> int:
+    class_map_path = Path(class_map_file)
+    with class_map_path.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames is None or "Class Code" not in reader.fieldnames:
+            raise ValueError("Class map is missing the 'Class Code' column.")
+        return sum(1 for row in reader if row.get("Class Code", "").strip())
+
+
+def check_downloaded_files(
+    campus: str,
+    class_map_file: str | Path,
+    folder_specs: Mapping[str, tuple[str | Path, str]],
+) -> bool:
+    class_map_path = Path(class_map_file)
+
+    if not class_map_path.exists():
+        print(
+            _download_issue(
+                f"Class map file '{class_map_path.name}' not found at {class_map_path.parent}",
+                "Cannot verify the expected number of classes",
+            )
+        )
+        return False
+
+    try:
+        expected_classes = count_class_codes(class_map_path)
+    except Exception as exc:  # noqa: BLE001
+        print(
+            _download_issue(
+                f"Failed to read class map: {exc}",
+                "The download verification could not be completed",
+            )
+        )
+        return False
+
+    print(
+        f"Expected class files for {campus} based on class map: {expected_classes}\n"
+    )
+
+    overall_success = True
+    for folder_name, (folder_path, suffix) in folder_specs.items():
+        print(f"Checking folder '{folder_name}'...")
+        folder_path = Path(folder_path)
+        issues = list(
+            _download_folder_issues(folder_name, folder_path, expected_classes, suffix)
+        )
+        if issues:
+            overall_success = False
+            for issue in issues:
+                print(issue)
+        else:
+            print(
+                f"Folder '{folder_name}' contains {expected_classes} files "
+                f"with expected '{suffix}' format.\n"
+            )
+
+    return overall_success
 
 
 
@@ -2072,6 +2180,9 @@ def calculate_ranges(group):
 
 
     return pd.Series(counts + [total_students], index=column_names + ['Total Students'])
+
+
+
 
 
 
