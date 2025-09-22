@@ -24,12 +24,12 @@ except ImportError:
 #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
 #   use only when doing a new run with 3 files only
 DEBUG = False  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
-              # Set to True to use debugging paths, False for production paths
+              # Set to True to use debugging paths (with limited # of files), False for production paths
 TESTING = True    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
                   #  This is NOR DEBUGGING!  This uses all data before sending to teachers
-THIS_WEEK_NUM = 28 #  <======  Change this every week!!!!!!!!!!!!!
+THIS_WEEK_NUM = 4 #  <======  Change this every week!!!!!!!!!!!!!
 
-SEND_EMAIL = False
+SEND_EMAIL = True
 PRINT_REPORT = False
 
 
@@ -142,19 +142,19 @@ _PROJ_ROOT = os.path.abspath(os.path.join(_THIS_DIR, os.pardir, os.pardir))
 
 
 
-VAU_CLASS_MAP_FILE  = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'VAUClassMap2024-25.csv')
+VAU_CLASS_MAP_FILE  = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'VAUClassMap2025-26.csv')
 
 
 
-MAE_CLASS_MAP_FILE  = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'MAEClassMap2024-25.csv')
+MAE_CLASS_MAP_FILE  = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'MAEClassMap2025-26.csv')
 
 
 
-VAU_STUDENT_MAP_FILE = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'VAUStudentMap2024-25.csv')
+VAU_STUDENT_MAP_FILE = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'VAUStudentMap2025-26.csv')
 
 
 
-MAE_STUDENT_MAP_FILE = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'MAEStudentMap2024-25.csv')
+MAE_STUDENT_MAP_FILE = os.path.join(_PROJ_ROOT, 'Code', 'Common', 'MAEStudentMap2025-26.csv')
 
 
 
@@ -232,36 +232,50 @@ def _download_folder_issues(
     folder: Path,
     expected_count: int,
     expected_suffix: str,
-) -> Iterable[str]:
-    if not folder.exists():
-        yield _download_issue(
-            f"Missing folder '{name}'",
-            "The download step may have been skipped or saved to a different location",
-        )
-        return
+) -> tuple[list[str], Optional[bool]]:
+    folder_path = Path(folder)
+    issues: list[str] = []
+    format_ok: Optional[bool] = None
 
-    files = _download_list_files(folder)
+    if not folder_path.exists():
+        issues.append(
+            _download_issue(
+                f"Missing folder '{name}'",
+                "The download step may have been skipped or saved to a different location",
+            )
+        )
+        return issues, format_ok
+
+    files = _download_list_files(folder_path)
     actual_count = len(files)
     if actual_count != expected_count:
-        yield _download_issue(
-            (
-                f"Folder '{name}' contains {actual_count} files but "
-                f"expected {expected_count}"
-            ),
-            "Some class exports might not have been downloaded",
+        issues.append(
+            _download_issue(
+                (
+                    f"Folder '{name}' contains {actual_count} files but "
+                    f"expected {expected_count}"
+                ),
+                "Some class exports might not have been downloaded",
+            )
         )
 
     invalid = [path.name for path in files if path.suffix.lower() != expected_suffix]
     if invalid:
+        format_ok = False
         display = ", ".join(sorted(invalid))
-        yield _download_issue(
-            (
-                f"Folder '{name}' has files with unexpected extensions: "
-                f"{display}"
-            ),
-            "Files may have been exported or renamed in the wrong format",
+        issues.append(
+            _download_issue(
+                (
+                    f"Folder '{name}' has files with unexpected extensions: "
+                    f"{display}"
+                ),
+                "Files may have been exported or renamed in the wrong format",
+            )
         )
+    else:
+        format_ok = True
 
+    return issues, format_ok
 
 def count_class_codes(class_map_file: str | Path) -> int:
     class_map_path = Path(class_map_file)
@@ -307,13 +321,29 @@ def check_downloaded_files(
     for folder_name, (folder_path, suffix) in folder_specs.items():
         print(f"Checking folder '{folder_name}'...")
         folder_path = Path(folder_path)
-        issues = list(
-            _download_folder_issues(folder_name, folder_path, expected_classes, suffix)
+        issues, format_ok = _download_folder_issues(
+            folder_name, folder_path, expected_classes, suffix
         )
         if issues:
             overall_success = False
             for issue in issues:
                 print(issue)
+
+            if format_ok is True:
+                print(
+                    f"Folder '{folder_name}' file formats are correct "
+                    f"(expected '{suffix}' extension).\n"
+                )
+            elif format_ok is False:
+                print(
+                    f"Folder '{folder_name}' file formats have issues. "
+                    "See details above.\n"
+                )
+            else:
+                print(
+                    f"Folder '{folder_name}' file formats could not be verified "
+                    "because the folder is missing.\n"
+                )
         else:
             print(
                 f"Folder '{folder_name}' contains {expected_classes} files "
@@ -321,12 +351,6 @@ def check_downloaded_files(
             )
 
     return overall_success
-
-
-
-
-
-
 
 VAU_REPORT_DIRECTORY = os.path.join(_PROJ_ROOT, 'Ready For Printing', 'VAU')
 
@@ -576,6 +600,39 @@ def send_email(to: str | None, cc: str | None, subject: str, body: str) -> bool:
         print(f"ERROR: Failed to send email via Outlook: {exc}")
         return False
 
+
+
+def send_duplicate_notification(
+    *,
+    subject: str,
+    intro_html: str,
+    duplicates: pd.DataFrame | None = None,
+    details_html: str | None = None,
+    closing_html: str | None = None,
+) -> bool:
+    """Send a duplicate summary email using Outlook."""
+    if not SEND_EMAIL:
+        print("INFO: SEND_EMAIL is disabled; skipping duplicate notification email.")
+        return False
+
+    recipient_to = to_email
+    recipient_cc = to_email if TESTING else cc_email
+
+    body_parts: list[str] = []
+    if intro_html:
+        body_parts.append(intro_html.strip())
+    if duplicates is not None and not duplicates.empty:
+        body_parts.append(duplicates.to_html(index=False))
+    if details_html:
+        body_parts.append(details_html.strip())
+    if closing_html:
+        body_parts.append(closing_html.strip())
+
+    if not body_parts:
+        warn_once("WARNING", "Attempted to send duplicate notification email with empty body; skipping.")
+        return False
+
+    return send_email(recipient_to, recipient_cc, subject, "<br><br>".join(body_parts))
 
 
 def create_pdf_from_html(html: str, output_path: str) -> bool:
@@ -1228,7 +1285,10 @@ def get_class_code_from_html(soup: BeautifulSoup | None) -> Optional[str]:
     return None
 
 
-def FindDupStudentsInBSViaClassList(BSdirectory: str) -> bool:
+def FindDupStudentsInBSViaClassList(
+    BSdirectory: str,
+    collect_duplicates: list[pd.DataFrame] | None = None,
+) -> bool:
     if not BSdirectory or not os.path.exists(BSdirectory):
         print(f"ERROR: Directory not found: {BSdirectory}")
         return True
@@ -1248,7 +1308,10 @@ def FindDupStudentsInBSViaClassList(BSdirectory: str) -> bool:
     if not duplicates.empty:
         print()
         print("Duplicate students found:")
-        print(duplicates.sort_values(['Student Full Name', 'Org Defined ID']).to_string(index=False))
+        sorted_duplicates = duplicates.sort_values(['Student Full Name', 'Org Defined ID'])
+        print(sorted_duplicates.to_string(index=False))
+        if collect_duplicates is not None:
+            collect_duplicates.append(sorted_duplicates.copy())
         return False
 
     print("No duplicates found in Brightspace class lists")
@@ -1256,7 +1319,13 @@ def FindDupStudentsInBSViaClassList(BSdirectory: str) -> bool:
 
 
 
-def FindDupStudentsInBSViaAttendanceGrades(target_dir: str, column_name: str) -> bool:
+def FindDupStudentsInBSViaAttendanceGrades(
+    target_dir: str,
+    column_name: str,
+    *,
+    collect_duplicates: list[pd.DataFrame] | None = None,
+    send_notification: bool = True,
+) -> bool:
     if not target_dir or not os.path.exists(target_dir):
         print(f"Directory not found: {target_dir}")
         return True
@@ -1341,25 +1410,23 @@ def FindDupStudentsInBSViaAttendanceGrades(target_dir: str, column_name: str) ->
 
     print()
     print('Found duplicate student IDs:')
-    print(duplicates.sort_values(by=column_name).to_string(index=False))
+    sorted_duplicates = duplicates.sort_values(by=column_name)
+    print(sorted_duplicates.to_string(index=False))
 
-    if SEND_EMAIL:
-        if TESTING:
-            cc = to_email
-            to = to_email
-        else:
-            to = to_email
-            cc = cc_email
+    if collect_duplicates is not None:
+        collect_duplicates.append(sorted_duplicates.copy())
 
-        df_string = duplicates.to_html(index=False)
-        subject_email = "Please check and remove duplicates in Brightspace classes"
-        body_email = (
-            "Hello Office, <br><br>"
-            "I ran a report today, and the following students are registered in one or more classes in BrightSpace. "
-            "Please check and remove duplicates. Thank you.<br><br>"
-            f"{df_string}<br><br>Sincerely, <br>Ramzan Khuwaja"
+    if send_notification:
+        send_duplicate_notification(
+            subject='Please check and remove duplicates in Brightspace classes',
+            intro_html=(
+                'Hello Office, <br><br>'
+                'I ran a report today, and the following students are registered in one or more classes in BrightSpace. '
+                'Please check and remove duplicates. Thank you.'
+            ),
+            duplicates=sorted_duplicates,
+            closing_html='Sincerely, <br>Ramzan Khuwaja',
         )
-        send_email(to, cc, subject_email, body_email)
 
     return False
 
