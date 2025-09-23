@@ -44,11 +44,16 @@ def email_to_remind_students(df_remind_students) -> bool:
             cc = utils.cc_email
 
         subject_email = 'Please remind these students to login to Brightspace'
+        table_html = utils.render_html_table(
+            payload,
+            title='Students pending Brightspace login',
+            subtitle='No platform access in at least two weeks.',
+        )
         body_email = (
             f"Hello {teacher_name},<br><br>"
-            'The following students have not logged into Brightspace for at least two weeks. '
-            'Please remind them to access the platform each week.<br><br>'
-            f"{payload.to_html(index=False)}<br><br>Thank you.<br><br>Ramzan Khuwaja"
+            'The students listed below have not logged into Brightspace for at least two weeks. Regular, weekly use of Brightspace is essential for student success at Spirit of Math. Please remind these students to access the platform each week.<br><br>'
+            'Please use the list below when calling parents over the next two weeks.<br><br>'
+            f"{table_html}<br><br>Thank you.<br><br>Ramzan Khuwaja"
         )
 
         if not utils.send_email(to, cc, subject_email, body_email):

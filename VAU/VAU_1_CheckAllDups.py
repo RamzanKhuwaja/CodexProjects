@@ -131,22 +131,17 @@ def main() -> bool:
 
     if duplicate_alerts:
         required_columns = ['Org Defined ID', 'Student Full Name', 'Last Accessed', 'Class Code']
-        class_list_table_html = None
-        other_alerts: list[str] = []
+        details_parts: list[str] = []
 
         for check_name, duplicates_df in duplicate_sections:
             if hasattr(duplicates_df, 'to_html') and all(col in duplicates_df.columns for col in required_columns):
                 trimmed = duplicates_df[required_columns].drop_duplicates().reset_index(drop=True)
-                class_list_table_html = trimmed.to_html(index=False)
-            else:
-                other_alerts.append(check_name)
-
-        details_parts: list[str] = []
-        if class_list_table_html:
-            details_parts.append(class_list_table_html)
-        if other_alerts:
-            alerts_html = ', '.join(other_alerts)
-            details_parts.append(f'<p>Additional duplicate alerts: {alerts_html}</p>')
+                table_html = utils.render_html_table(
+                    trimmed,
+                    subtitle='Please review and remove extra enrollments.',
+                )
+                if table_html:
+                    details_parts.append(table_html)
 
         if not details_parts:
             list_items = ''.join(f'<li>{check_name} - {target}</li>' for check_name, target in duplicate_alerts)

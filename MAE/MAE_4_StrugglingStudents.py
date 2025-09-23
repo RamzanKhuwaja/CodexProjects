@@ -44,11 +44,16 @@ def email_struggling_students_to_stakeholders(df_struggling_students) -> bool:
             cc = utils.cc_email
 
         subject_email = 'Intervention needed for students below performance threshold'
+        table_html = utils.render_html_table(
+            payload,
+            title='Students requiring intervention',
+            subtitle='These learners currently have cumulative grades below the campus threshold.',
+        )
         body_email = (
             f"Hello {teacher_name},<br><br>"
             'The following students currently have a cumulative grade below our threshold. '
             'Please review their progress and engage with the office team to plan next steps.<br><br>'
-            f"{payload.to_html(index=False)}<br><br>"
+            f"{table_html}<br><br>"
             'Many of your students are doing well; thank you for your efforts.<br><br>'
             'Ramzan Khuwaja'
         )

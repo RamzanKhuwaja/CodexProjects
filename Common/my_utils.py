@@ -30,7 +30,7 @@ TESTING = True    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
 THIS_WEEK_NUM = 4 #  <======  Change this every week!!!!!!!!!!!!!
 
 SEND_EMAIL = True
-PRINT_REPORT = False
+PRINT_REPORT = True
 
 
 # ======  Following Don't Change Often!
@@ -69,6 +69,146 @@ def normalize(value: object) -> str:
     return str(value).strip().lower()
 
 
+
+EMAIL_WRAPPER_STYLE = (
+    "font-family:'Segoe UI', Arial, sans-serif;"
+    " color:#1f3a4d;"
+    " font-size:13px;"
+    " line-height:1.5;"
+)
+EMAIL_TITLE_STYLE = (
+    "font-size:16px;"
+    " font-weight:600;"
+    " margin:0 0 8px 0;"
+)
+EMAIL_SUBTITLE_STYLE = (
+    "font-size:13px;"
+    " margin:0 0 12px 0;"
+    " color:#2b5d80;"
+)
+EMAIL_TABLE_STYLE = (
+    "border-collapse:collapse;"
+    " width:100%;"
+    " max-width:680px;"
+    " margin:0 0 12px 0;"
+    " border:1px solid #c6d6e5;"
+)
+EMAIL_HEADER_STYLE = (
+    "background-color:#007795;"
+    " color:#ffffff;"
+    " text-align:left;"
+    " padding:10px 12px;"
+    " font-weight:600;"
+    " border-bottom:1px solid #005c73;"
+)
+EMAIL_CELL_STYLE = (
+    "padding:9px 12px;"
+    " border-bottom:1px solid #c6d6e5;"
+    " background-color:#ffffff;"
+    " color:#1f3a4d;"
+    " text-align:left;"
+)
+EMAIL_CELL_ALT_STYLE = (
+    "padding:9px 12px;"
+    " border-bottom:1px solid #c6d6e5;"
+    " background-color:#f2f8fb;"
+    " color:#1f3a4d;"
+    " text-align:left;"
+)
+
+
+def render_html_table(
+    df: pd.DataFrame,
+    *,
+    title: str | None = None,
+    subtitle: str | None = None,
+) -> str:
+    '''Return a branded HTML table snippet suitable for Outlook emails.'''
+    if df is None or df.empty:
+        return ''
+
+    display_df = df.copy()
+    display_df = display_df.fillna('')
+
+    table_html = display_df.to_html(index=False, border=0)
+    soup = BeautifulSoup(table_html, 'html.parser')
+    table_tag = soup.find('table')
+
+    if table_tag is None:
+        return ''
+
+    table_tag.attrs.pop('border', None)
+    table_tag['cellpadding'] = '0'
+    table_tag['cellspacing'] = '0'
+    table_tag['style'] = EMAIL_TABLE_STYLE
+
+    for header_cell in table_tag.find_all('th'):
+        header_cell['style'] = EMAIL_HEADER_STYLE
+
+    body = table_tag.find('tbody')
+    if body:
+        row_iterable = body.find_all('tr')
+    else:
+        all_rows = table_tag.find_all('tr')
+        row_iterable = all_rows[1:] if len(all_rows) > 1 else []
+
+    for index, row in enumerate(row_iterable):
+        cell_style = EMAIL_CELL_ALT_STYLE if index % 2 else EMAIL_CELL_STYLE
+        for cell in row.find_all('td'):
+            cell['style'] = cell_style
+
+    wrapper_parts: list[str] = [f'<div style="{EMAIL_WRAPPER_STYLE}">']
+    if title:
+        wrapper_parts.append(f'<div style="{EMAIL_TITLE_STYLE}">{title}</div>')
+    if subtitle:
+        wrapper_parts.append(f'<div style="{EMAIL_SUBTITLE_STYLE}">{subtitle}</div>')
+    wrapper_parts.append(str(table_tag))
+    wrapper_parts.append('</div>')
+    return ''.join(wrapper_parts)
+
+
+
+
+def extract_student_id(primary: object, fallback: object | None = None) -> Optional[str]:
+    "Return the best numeric student id string, preserving leading zeros when possible."
+    candidates: list[str] = []
+
+    def add_candidate(source: object) -> None:
+        if source is None:
+            return
+        if isinstance(source, str):
+            raw = source
+        else:
+            if pd.isna(source):
+                return
+            raw = str(source)
+        value = raw.strip()
+        if not value:
+            return
+        match = re.search(r'(\d+)', value)
+        if not match:
+            return
+        digits = match.group(1)
+        if digits:
+            candidates.append(digits)
+
+    add_candidate(primary)
+    add_candidate(fallback)
+
+    if not candidates:
+        return None
+
+    def leading_zero_count(value: str) -> int:
+        count = 0
+        for char in value:
+            if char == '0':
+                count += 1
+            else:
+                break
+        return count
+
+    best = max(candidates, key=lambda item: (len(item), leading_zero_count(item)))
+    return best
 
 def find_first_matching_column(df: pd.DataFrame, candidates: Sequence[str]) -> Optional[str]:
     for col in df.columns:
@@ -622,7 +762,7 @@ def send_duplicate_notification(
     if intro_html:
         body_parts.append(intro_html.strip())
     if duplicates is not None and not duplicates.empty:
-        body_parts.append(duplicates.to_html(index=False))
+        body_parts.append(render_html_table(duplicates, title='Potential duplicate students'))
     if details_html:
         body_parts.append(details_html.strip())
     if closing_html:
@@ -669,7 +809,8 @@ def create_pdf_from_html(html: str, output_path: str) -> bool:
 def convert_date_format(value, context="Last Accessed") -> str:
     parsed = parse_datetime(value, context)
     if parsed is None:
-        return datetime.now().strftime('%b %d, %Y')
+        fallback_date = datetime(2024, 9, 1)
+        return fallback_date.strftime('%b %d, %Y')
     return parsed.strftime('%b %d, %Y')
 
 
@@ -1100,8 +1241,19 @@ def add_class_list_data(master_df: pd.DataFrame, class_list_dir_path: str) -> pd
             warn_once("WARNING", f"Missing last accessed column in '{filename}'")
             continue
 
+        username_col = find_first_matching_column(student_table, ("username", "user name", "email"))
+        if username_col:
+            fallback_values = student_rows[username_col]
+        else:
+            fallback_values = [None] * len(student_rows)
+
+        org_ids = [
+            extract_student_id(primary, fallback)
+            for primary, fallback in zip(student_rows[id_col], fallback_values)
+        ]
+
         student_data = pd.DataFrame({
-            'Org Defined ID': student_rows[id_col].astype(str).str.extract(r'(\d+)', expand=False),
+            'Org Defined ID': org_ids,
             'Student Full Name': name_series,
             'Last Accessed': student_rows[last_accessed_col],
             'Class Code': class_code
@@ -1154,7 +1306,13 @@ def get_attendance_data(attendance_dir: str) -> pd.DataFrame:
             warn_once("WARNING", f"Skipping '{filename}' - no Org Defined ID column found")
             continue
 
-        df['Org Defined ID'] = df[id_col].astype(str).str.extract(r"(\d+)", expand=False)
+        username_col = find_first_matching_column(df, ("username", "user name", "email"))
+
+        def compute_student_id(row):
+            fallback = row[username_col] if username_col else None
+            return extract_student_id(row[id_col], fallback)
+
+        df['Org Defined ID'] = df.apply(compute_student_id, axis=1)
         df = df.dropna(subset=['Org Defined ID'])
         if df.empty:
             warn_once("WARNING", f"No valid Org Defined ID entries in '{filename}'")
@@ -1211,7 +1369,13 @@ def get_grades_data(grades_dir: str) -> pd.DataFrame:
             warn_once("WARNING", f"Skipping '{filename}' - no OrgDefinedId column found")
             continue
 
-        df['OrgDefinedId'] = df[id_col].astype(str).str.extract(r"(\d+)", expand=False)
+        username_col = find_first_matching_column(df, ("username", "user name", "email"))
+
+        def compute_student_id(row):
+            fallback = row[username_col] if username_col else None
+            return extract_student_id(row[id_col], fallback)
+
+        df['OrgDefinedId'] = df.apply(compute_student_id, axis=1)
         df = df.dropna(subset=['OrgDefinedId'])
         if df.empty:
             warn_once("WARNING", f"No valid OrgDefinedId entries in '{filename}'")
@@ -1372,7 +1536,13 @@ def FindDupStudentsInBSViaAttendanceGrades(
                 processed_count += 1
             continue
 
-        df[column_name] = df[id_col].astype(str).str.extract(r'(\d+)', expand=False)
+        username_col = find_first_matching_column(df, ('username', 'user name', 'email'))
+
+        def compute_student_id(row):
+            fallback = row[username_col] if username_col else None
+            return extract_student_id(row[id_col], fallback)
+
+        df[column_name] = df.apply(compute_student_id, axis=1)
         df = df.dropna(subset=[column_name])
         if df.empty:
             warn_once('WARNING', f"No valid student identifiers in '{file_path}'")
@@ -1767,13 +1937,18 @@ def email_att_missing_to_stakeholders(df_missing_attendance: pd.DataFrame) -> No
             cc = cc_email
 
         subject_email = "Please update your Brightspace class data"
+        table_html = render_html_table(
+            df_report,
+            title='Students requiring updates',
+            subtitle='These classes have not been updated in Brightspace for the past two weeks.',
+        )
         body_email = (
             f"Hello {teacher},<br><br>"
-            "Spirit of Math advises parents and students to access their class attendance and marks within a week after a class is completed.<br><br>"
-            "Our records show that the following of your students/classes have not been updated for the past two weeks. "
-            "Please update ASAP and keep the above practice for the rest of this school year.<br><br>"
-            "No need to respond to this email, just make the applicable corrections. Thank you.<br><br>"
-            f"{df_report.to_html(index=False)}<br><br>Sincerely,<br>Ramzan Khuwaja<br><br>"
+            "Spirit of Math advises parents and students to check their class attendance and marks on BrightSpace within one week after a class is completed.<br><br>"
+            "Our records show that the following students/classes of yours have not been updated for the past two weeks."
+            " Please update them as soon as possible and maintain the above practice for the rest of this school year.<br><br>"
+            "No response is necessary - just make the applicable corrections. Thank you.<br><br>"
+            f"{table_html}<br>Sincerely,<br>Ramzan Khuwaja<br><br>"
         )
 
         send_email(to, cc, subject_email, body_email)
@@ -2247,6 +2422,7 @@ def calculate_ranges(group):
 
 
     return pd.Series(counts + [total_students], index=column_names + ['Total Students'])
+
 
 
 
