@@ -25,7 +25,7 @@ except ImportError:
 #   use only when doing a new run with 3 files only
 DEBUG = False  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
               # Set to True to use debugging paths (with limited # of files), False for production paths
-TESTING = True    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
+TESTING = False    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
                   #  This is NOR DEBUGGING!  This uses all data before sending to teachers
 THIS_WEEK_NUM = 4 #  <======  Change this every week!!!!!!!!!!!!!
 
@@ -372,7 +372,7 @@ def _download_folder_issues(
     folder: Path,
     expected_count: int,
     expected_suffix: str,
-) -> tuple[list[str], Optional[bool]]:
+) -> tuple[list[str], Optional[bool], list[str]]:
     folder_path = Path(folder)
     issues: list[str] = []
     format_ok: Optional[bool] = None
@@ -384,7 +384,7 @@ def _download_folder_issues(
                 "The download step may have been skipped or saved to a different location",
             )
         )
-        return issues, format_ok
+        return issues, format_ok, []
 
     files = _download_list_files(folder_path)
     actual_count = len(files)
@@ -399,23 +399,19 @@ def _download_folder_issues(
             )
         )
 
-    invalid = [path.name for path in files if path.suffix.lower() != expected_suffix]
+    invalid = sorted(path.name for path in files if path.suffix.lower() != expected_suffix)
     if invalid:
         format_ok = False
-        display = ", ".join(sorted(invalid))
         issues.append(
             _download_issue(
-                (
-                    f"Folder '{name}' has files with unexpected extensions: "
-                    f"{display}"
-                ),
+                f"Folder '{name}' has files with unexpected extensions",
                 "Files may have been exported or renamed in the wrong format",
             )
         )
     else:
         format_ok = True
 
-    return issues, format_ok
+    return issues, format_ok, invalid
 
 def count_class_codes(class_map_file: str | Path) -> int:
     class_map_path = Path(class_map_file)
@@ -461,13 +457,19 @@ def check_downloaded_files(
     for folder_name, (folder_path, suffix) in folder_specs.items():
         print(f"Checking folder '{folder_name}'...")
         folder_path = Path(folder_path)
-        issues, format_ok = _download_folder_issues(
+        issues, format_ok, invalid_files = _download_folder_issues(
             folder_name, folder_path, expected_classes, suffix
         )
         if issues:
             overall_success = False
             for issue in issues:
                 print(issue)
+
+            if invalid_files:
+                print("Unexpected file formats detected:")
+                for file_name in invalid_files:
+                    print(f"  - {file_name}")
+                print()
 
             if format_ok is True:
                 print(
