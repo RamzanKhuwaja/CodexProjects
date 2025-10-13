@@ -27,7 +27,7 @@ DEBUG = False  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
               # Set to True to use debugging paths (with limited # of files), False for production paths
 TESTING = False    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
                   #  This is NOR DEBUGGING!  This uses all data before sending to teachers
-THIS_WEEK_NUM = 4 #  <======  Change this every week!!!!!!!!!!!!!
+THIS_WEEK_NUM = 6 #  <======  Change this every week!!!!!!!!!!!!!
 
 SEND_EMAIL = True
 PRINT_REPORT = True

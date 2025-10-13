@@ -51,8 +51,7 @@ def email_to_remind_students(df_remind_students) -> bool:
         )
         body_email = (
             f"Hello {teacher_name},<br><br>"
-            'The students listed below have not logged into Brightspace for at least two weeks. Regular, weekly use of Brightspace is essential for student success at Spirit of Math. Please remind these students to access the platform each week.<br><br>'
-            'Please use the list below when calling parents over the next two weeks.<br><br>'
+            'Please review the list of students who have not yet accessed Brightspace. Kindly remind them to log in at their earliest opportunity to ensure they can have access to the additional resources. This is crucial, as students and parents need to log in to Brightspace to view report card comments at the end of each term. Timely access will help support ongoing learning and academic success.<br><br>'
             f"{table_html}<br><br>Thank you.<br><br>Ramzan Khuwaja"
         )
 
