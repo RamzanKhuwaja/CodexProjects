@@ -1,6 +1,22 @@
+import re
 import sys
+from typing import Optional
 
 import Common.my_utils as utils
+
+_CLASS_CODE_GRADE_PATTERN = re.compile(r"SOMp25([A-Za-z0-9]{1,2})", re.IGNORECASE)
+UPPER_GRADE_MESSAGE = (
+    "Please find attached the students' academic marks to date. "
+    "These results provide an overview of their current progress and areas that may need further support. "
+    "Angela will be reaching out to each teacher individually to discuss student performance, classroom observations, "
+    "and next steps for supporting their continued growth."
+)
+LOWER_GRADE_MESSAGE = (
+    "Please find attached the students' academic marks to date. "
+    "For our lower grade students, these scores are just one indicator of their progress and should be considered "
+    "alongside classroom engagement, effort, and growth over time. "
+    "Angela will be in touch with each teacher to discuss student performance and next steps for supporting their development."
+)
 
 CAMPUS = "VAU"
 EMAIL_COLUMNS = [
@@ -9,6 +25,26 @@ EMAIL_COLUMNS = [
     "Class Code",
     "Final Grade",
 ]
+
+
+def _extract_grade_from_class_code(value: object) -> Optional[int]:
+    if not isinstance(value, str):
+        return None
+    match = _CLASS_CODE_GRADE_PATTERN.search(value)
+    if not match:
+        return None
+    token = match.group(1).upper()
+    if not token:
+        return None
+    if "K" in token:
+        return 0
+    digits = "".join(ch for ch in token if ch.isdigit())
+    if not digits:
+        return None
+    try:
+        return int(digits)
+    except ValueError:
+        return None
 
 
 def email_struggling_students_to_stakeholders(df_struggling_students) -> bool:
@@ -44,6 +80,18 @@ def email_struggling_students_to_stakeholders(df_struggling_students) -> bool:
             cc = utils.cc_email
 
         subject_email = 'Intervention needed for students below performance threshold'
+        class_codes = df_teacher['Class Code'].dropna().astype(str)
+        grade_levels = [
+            grade
+            for grade in (_extract_grade_from_class_code(code) for code in class_codes.unique())
+            if grade is not None
+        ]
+        highest_grade = max(grade_levels) if grade_levels else None
+        message = (
+            LOWER_GRADE_MESSAGE
+            if highest_grade is not None and highest_grade <= 4
+            else UPPER_GRADE_MESSAGE
+        )
         table_html = utils.render_html_table(
             payload,
             title='Students requiring intervention',
@@ -51,9 +99,8 @@ def email_struggling_students_to_stakeholders(df_struggling_students) -> bool:
         )
         body_email = (
             f"Hello {teacher_name},<br><br>"
-            'The following students currently have cumulative grades below our threshold. Please review their progress and coordinate with the office team to plan next steps. <br><br>'
+            f"{message}<br><br>"
             f"{table_html}<br><br>"
-            
             'Ramzan Khuwaja'
         )
 
