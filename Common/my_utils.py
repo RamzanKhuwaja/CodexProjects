@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import re
 import time
@@ -9,9 +11,42 @@ from typing import Iterable, Mapping, Optional, Sequence
 import glob
 import numpy as np
 import openpyxl
-import pandas as pd
 from bs4 import BeautifulSoup
 import win32com.client as email_client
+
+try:
+    import pandas as pd
+    _PANDAS_IMPORT_ERROR: Exception | None = None
+except Exception as exc:  # noqa: BLE001
+    _PANDAS_IMPORT_ERROR = exc
+
+    class _PandasProxy:
+        """Proxy that surfaces a helpful error when pandas is unavailable."""
+
+        __slots__ = ("_error",)
+
+        class DataFrame:  # type: ignore[empty-body]
+            """Placeholder to keep type annotations from failing at import time."""
+
+        class Series:  # type: ignore[empty-body]
+            """Placeholder to keep type annotations from failing at import time."""
+
+        def __init__(self, error: Exception) -> None:
+            self._error = error
+
+        def __getattr__(self, name: str) -> None:
+            raise ModuleNotFoundError(
+                "pandas is required for this functionality but could not be imported. "
+                "Reinstall pandas for your current Python version."
+            ) from self._error
+
+        def __call__(self, *args, **kwargs) -> None:  # noqa: ANN003, ANN002
+            raise ModuleNotFoundError(
+                "pandas is required for this functionality but could not be imported. "
+                "Reinstall pandas for your current Python version."
+            ) from self._error
+
+    pd = _PandasProxy(exc)  # type: ignore[assignment]
 
 try:
     import pdfkit
@@ -27,7 +62,7 @@ DEBUG = False  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
               # Set to True to use debugging paths (with limited # of files), False for production paths
 TESTING = True    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
                   #  This is NOR DEBUGGING!  This uses all data before sending to teachers
-THIS_WEEK_NUM = 7 #  <======  Change this every week!!!!!!!!!!!!!
+THIS_WEEK_NUM = 9 #  <======  Change this every week!!!!!!!!!!!!!
 
 SEND_EMAIL = True
 PRINT_REPORT = True
