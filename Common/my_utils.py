@@ -4,9 +4,13 @@ import os
 import re
 import time
 import csv
+import math
+import html
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable, Mapping, Optional, Sequence
+from collections import Counter
 
 import glob
 import numpy as np
@@ -18,35 +22,152 @@ try:
     import pandas as pd
     _PANDAS_IMPORT_ERROR: Exception | None = None
 except Exception as exc:  # noqa: BLE001
+    pd = None  # type: ignore[assignment]
     _PANDAS_IMPORT_ERROR = exc
 
-    class _PandasProxy:
-        """Proxy that surfaces a helpful error when pandas is unavailable."""
 
-        __slots__ = ("_error",)
+PANDAS_AVAILABLE = _PANDAS_IMPORT_ERROR is None
 
-        class DataFrame:  # type: ignore[empty-body]
-            """Placeholder to keep type annotations from failing at import time."""
 
-        class Series:  # type: ignore[empty-body]
-            """Placeholder to keep type annotations from failing at import time."""
+def is_missing(value: object) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, float) and math.isnan(value):
+        return True
+    if isinstance(value, str) and not value.strip():
+        return True
+    if PANDAS_AVAILABLE:
+        try:
+            return bool(pd.isna(value))  # type: ignore[union-attr]
+        except Exception:  # noqa: BLE001
+            return False
+    return False
 
-        def __init__(self, error: Exception) -> None:
-            self._error = error
 
-        def __getattr__(self, name: str) -> None:
-            raise ModuleNotFoundError(
-                "pandas is required for this functionality but could not be imported. "
-                "Reinstall pandas for your current Python version."
-            ) from self._error
+def _coerce_str(value: object) -> str:
+    if value is None:
+        return ""
+    return str(value)
 
-        def __call__(self, *args, **kwargs) -> None:  # noqa: ANN003, ANN002
-            raise ModuleNotFoundError(
-                "pandas is required for this functionality but could not be imported. "
-                "Reinstall pandas for your current Python version."
-            ) from self._error
 
-    pd = _PandasProxy(exc)  # type: ignore[assignment]
+def _format_table(rows: Iterable[Mapping[str, object]], columns: Sequence[str]) -> str:
+    rows_list = list(rows)
+    if not rows_list:
+        return "(no rows)"
+
+    widths: dict[str, int] = {col: len(col) for col in columns}
+    for row in rows_list:
+        for col in columns:
+            widths[col] = max(widths[col], len(_coerce_str(row.get(col, ""))))
+
+    header = " | ".join(col.ljust(widths[col]) for col in columns)
+    separator = "-+-".join("-" * widths[col] for col in columns)
+    lines = [header, separator]
+
+    for row in rows_list:
+        lines.append(
+            " | ".join(_coerce_str(row.get(col, "")).ljust(widths[col]) for col in columns)
+        )
+
+    return "\n".join(lines)
+
+
+def _sorted_rows(rows: Iterable[Mapping[str, object]], keys: Sequence[str]) -> list[dict[str, object]]:
+    if not keys:
+        return [dict(row) for row in rows]
+
+    def sort_key(row: Mapping[str, object]) -> tuple:
+        return tuple(
+            _coerce_str(row.get(key, "")).lower()
+            for key in keys
+        )
+
+    return sorted((dict(row) for row in rows), key=sort_key)
+
+
+@dataclass
+class TableData:
+    columns: list[str]
+    rows: list[dict[str, object]]
+
+    def __post_init__(self) -> None:
+        # Normalise columns and row keys to avoid KeyError later.
+        self.columns = [str(col) for col in self.columns]
+        normalised_rows: list[dict[str, object]] = []
+        for row in self.rows:
+            normalised_rows.append({col: row.get(col, "") for col in self.columns})
+        self.rows = normalised_rows
+
+    @property
+    def is_empty(self) -> bool:
+        return not self.rows
+
+    def __bool__(self) -> bool:
+        return not self.is_empty
+
+    def __len__(self) -> int:
+        return len(self.rows)
+
+    def select(self, columns: Sequence[str]) -> "TableData":
+        column_list = [str(col) for col in columns]
+        return TableData(column_list, [{col: row.get(col, "") for col in column_list} for row in self.rows])
+
+    def drop_duplicates(self, subset: Sequence[str] | None = None) -> "TableData":
+        if subset is None:
+            subset = self.columns
+        seen: set[tuple[object, ...]] = set()
+        unique_rows: list[dict[str, object]] = []
+        for row in self.rows:
+            key = tuple(row.get(col, "") for col in subset)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_rows.append(row.copy())
+        return TableData(self.columns, unique_rows)
+
+    def sorted(self, columns: Sequence[str]) -> "TableData":
+        return TableData(self.columns, _sorted_rows(self.rows, columns))
+
+    def to_string(self) -> str:
+        return _format_table(self.rows, self.columns)
+
+    def to_records(self) -> list[dict[str, object]]:
+        return [row.copy() for row in self.rows]
+
+
+def ensure_table_data(data: object, default_columns: Sequence[str] | None = None) -> TableData | None:
+    if data is None:
+        return None
+
+    if isinstance(data, TableData):
+        return data
+
+    if PANDAS_AVAILABLE and isinstance(data, pd.DataFrame):  # type: ignore[union-attr]
+        filled = data.fillna("")  # type: ignore[union-attr]
+        return TableData(list(filled.columns), filled.to_dict(orient="records"))  # type: ignore[union-attr]
+
+    if isinstance(data, list):
+        if not data:
+            columns = list(default_columns or [])
+        else:
+            # Merge keys across all rows to preserve information
+            column_set: list[str] = []
+            for row in data:
+                if isinstance(row, Mapping):
+                    for key in row.keys():
+                        if key not in column_set:
+                            column_set.append(str(key))
+            if column_set:
+                columns = column_set
+            else:
+                columns = list(default_columns or [])
+        processed_rows = []
+        for row in data:
+            if isinstance(row, Mapping):
+                processed_rows.append({str(col): row.get(col, "") for col in columns})
+        return TableData(columns, processed_rows)
+
+    return None
 
 try:
     import pdfkit
@@ -60,9 +181,9 @@ except ImportError:
 #   use only when doing a new run with 3 files only
 DEBUG = False  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
               # Set to True to use debugging paths (with limited # of files), False for production paths
-TESTING = True    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
+TESTING = False    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
                   #  This is NOR DEBUGGING!  This uses all data before sending to teachers
-THIS_WEEK_NUM = 9 #  <======  Change this every week!!!!!!!!!!!!!
+THIS_WEEK_NUM = 10 #  <======  Change this every week!!!!!!!!!!!!!
 
 SEND_EMAIL = True
 PRINT_REPORT = True
@@ -153,51 +274,46 @@ EMAIL_CELL_ALT_STYLE = (
 
 
 def render_html_table(
-    df: pd.DataFrame,
+    data,
     *,
     title: str | None = None,
     subtitle: str | None = None,
 ) -> str:
-    '''Return a branded HTML table snippet suitable for Outlook emails.'''
-    if df is None or df.empty:
+    """Return a branded HTML table snippet suitable for Outlook emails."""
+    table = ensure_table_data(data)
+    if table is None or table.is_empty:
         return ''
 
-    display_df = df.copy()
-    display_df = display_df.fillna('')
-
-    table_html = display_df.to_html(index=False, border=0)
-    soup = BeautifulSoup(table_html, 'html.parser')
-    table_tag = soup.find('table')
-
-    if table_tag is None:
+    columns = table.columns
+    if not columns:
         return ''
 
-    table_tag.attrs.pop('border', None)
-    table_tag['cellpadding'] = '0'
-    table_tag['cellspacing'] = '0'
-    table_tag['style'] = EMAIL_TABLE_STYLE
+    header_cells = ''.join(
+        f'<th style="{EMAIL_HEADER_STYLE}">{html.escape(str(col))}</th>' for col in columns
+    )
 
-    for header_cell in table_tag.find_all('th'):
-        header_cell['style'] = EMAIL_HEADER_STYLE
-
-    body = table_tag.find('tbody')
-    if body:
-        row_iterable = body.find_all('tr')
-    else:
-        all_rows = table_tag.find_all('tr')
-        row_iterable = all_rows[1:] if len(all_rows) > 1 else []
-
-    for index, row in enumerate(row_iterable):
+    body_rows: list[str] = []
+    for index, row in enumerate(table.rows):
         cell_style = EMAIL_CELL_ALT_STYLE if index % 2 else EMAIL_CELL_STYLE
-        for cell in row.find_all('td'):
-            cell['style'] = cell_style
+        cells = ''.join(
+            f'<td style="{cell_style}">{html.escape(_coerce_str(row.get(col, "")))}</td>'
+            for col in columns
+        )
+        body_rows.append(f'<tr>{cells}</tr>')
+
+    table_html = (
+        f'<table style="{EMAIL_TABLE_STYLE}" cellpadding="0" cellspacing="0">'
+        f'<thead><tr>{header_cells}</tr></thead>'
+        f'<tbody>{"".join(body_rows)}</tbody>'
+        '</table>'
+    )
 
     wrapper_parts: list[str] = [f'<div style="{EMAIL_WRAPPER_STYLE}">']
     if title:
-        wrapper_parts.append(f'<div style="{EMAIL_TITLE_STYLE}">{title}</div>')
+        wrapper_parts.append(f'<div style="{EMAIL_TITLE_STYLE}">{html.escape(title)}</div>')
     if subtitle:
-        wrapper_parts.append(f'<div style="{EMAIL_SUBTITLE_STYLE}">{subtitle}</div>')
-    wrapper_parts.append(str(table_tag))
+        wrapper_parts.append(f'<div style="{EMAIL_SUBTITLE_STYLE}">{html.escape(subtitle)}</div>')
+    wrapper_parts.append(table_html)
     wrapper_parts.append('</div>')
     return ''.join(wrapper_parts)
 
@@ -214,7 +330,7 @@ def extract_student_id(primary: object, fallback: object | None = None) -> Optio
         if isinstance(source, str):
             raw = source
         else:
-            if pd.isna(source):
+            if is_missing(source):
                 return
             raw = str(source)
         value = raw.strip()
@@ -245,8 +361,15 @@ def extract_student_id(primary: object, fallback: object | None = None) -> Optio
     best = max(candidates, key=lambda item: (len(item), leading_zero_count(item)))
     return best
 
-def find_first_matching_column(df: pd.DataFrame, candidates: Sequence[str]) -> Optional[str]:
-    for col in df.columns:
+def find_first_matching_column(columns_or_df, candidates: Sequence[str]) -> Optional[str]:
+    if columns_or_df is None:
+        return None
+    if hasattr(columns_or_df, "columns"):
+        columns = columns_or_df.columns  # type: ignore[assignment]
+    else:
+        columns = columns_or_df
+
+    for col in columns:
         if any(keyword in normalize(col) for keyword in candidates):
             return col
     return None
@@ -254,7 +377,7 @@ def find_first_matching_column(df: pd.DataFrame, candidates: Sequence[str]) -> O
 
 
 def parse_datetime(value: object, context: str = "") -> Optional[datetime]:
-    if pd.isna(value):
+    if is_missing(value):
         return None
     if isinstance(value, datetime):
         return value
@@ -606,42 +729,55 @@ def set_campus_info(campus_code):
 
 
 def check_duplicates_in_column(df, column_name):
+    if PANDAS_AVAILABLE and hasattr(df, "duplicated"):
+        duplicates = df[df.duplicated(column_name, keep=False)]  # type: ignore[index]
+
+        if not duplicates.empty:  # type: ignore[union-attr]
+            print()
+            print("Duplicate students found:")
+
+            print(f"Duplicate entries found in '{column_name}':")
+
+            for index, row in duplicates.iterrows():  # type: ignore[union-attr]
+
+                print(f"Row {index + 2}: {row[column_name]}")
+
+            print()
 
 
 
-    duplicates = df[df.duplicated(column_name, keep=False)]
+        else:
 
 
 
-    if not duplicates.empty:
+            print(f"No duplicates found in '{column_name}'.")
+
+        return
+
+    if not isinstance(df, list):
+        print(f"No duplicates found in '{column_name}'.")
+        return
+
+    seen: dict[str, list[int]] = {}
+    for index, row in enumerate(df):
+        if not isinstance(row, Mapping):
+            continue
+        value = _coerce_str(row.get(column_name, "")).strip()
+        if not value:
+            continue
+        seen.setdefault(value, []).append(index)
+
+    duplicates = [(idx, value) for value, positions in seen.items() for idx in positions if len(positions) > 1]
+
+    if duplicates:
         print()
         print("Duplicate students found:")
-
         print(f"Duplicate entries found in '{column_name}':")
-
-
-
-        for index, row in duplicates.iterrows():
-
-
-
-            print(f"Row {index + 2}: {row[column_name]}")
-
-
-
+        for index, value in duplicates:
+            print(f"Row {index + 2}: {value}")
         print()
-
-
-
     else:
-
-
-
         print(f"No duplicates found in '{column_name}'.")
-
-
-
-
 
 
 
@@ -649,8 +785,31 @@ def check_class_map(class_map: str) -> bool:
     directory = os.path.dirname(os.path.abspath(class_map))
     print(f"Processing files in directory: {directory}")
     print(f"Processing class map file: {class_map}")
+    if PANDAS_AVAILABLE:
+        try:
+            df = pd.read_csv(class_map)  # type: ignore[assignment]
+        except FileNotFoundError:
+            print(f"File not found: {class_map}")
+            return False
+        except Exception as exc:  # noqa: BLE001
+            print(f"An error occurred: {exc}")
+            return False
+
+        columns_to_check = ['Class Code', 'Attendance', 'Grades', 'ClassList']
+        for column in columns_to_check:
+            if column in df.columns:  # type: ignore[union-attr]
+                check_duplicates_in_column(df, column)
+            else:
+                print(f"Column '{column}' not found in the CSV file.")
+
+        print('Processed 1 file successfully')
+        return True
+
     try:
-        df = pd.read_csv(class_map)
+        with open(class_map, newline='', encoding='utf-8-sig') as handle:
+            reader = csv.DictReader(handle)
+            rows = [row for row in reader if row]
+            fieldnames = reader.fieldnames or []
     except FileNotFoundError:
         print(f"File not found: {class_map}")
         return False
@@ -660,8 +819,8 @@ def check_class_map(class_map: str) -> bool:
 
     columns_to_check = ['Class Code', 'Attendance', 'Grades', 'ClassList']
     for column in columns_to_check:
-        if column in df.columns:
-            check_duplicates_in_column(df, column)
+        if column in fieldnames:
+            check_duplicates_in_column(rows, column)
         else:
             print(f"Column '{column}' not found in the CSV file.")
 
@@ -783,7 +942,7 @@ def send_duplicate_notification(
     *,
     subject: str,
     intro_html: str,
-    duplicates: pd.DataFrame | None = None,
+    duplicates: TableData | object | None = None,
     details_html: str | None = None,
     closing_html: str | None = None,
 ) -> bool:
@@ -798,8 +957,9 @@ def send_duplicate_notification(
     body_parts: list[str] = []
     if intro_html:
         body_parts.append(intro_html.strip())
-    if duplicates is not None and not duplicates.empty:
-        body_parts.append(render_html_table(duplicates, title='Potential duplicate students'))
+    duplicates_table = ensure_table_data(duplicates)
+    if duplicates_table is not None and not duplicates_table.is_empty:
+        body_parts.append(render_html_table(duplicates_table, title='Potential duplicate students'))
     if details_html:
         body_parts.append(details_html.strip())
     if closing_html:
@@ -1171,9 +1331,125 @@ def calculate_final_grade(row: pd.Series) -> int:
 # Read each HTML file in this directory using pandas library
 
 
+def _iter_table_headers_and_rows(soup: BeautifulSoup) -> Iterable[tuple[list[str], list[list[str]]]]:
+    for table in soup.find_all('table'):
+        rows: list[list[str]] = []
+        headers: list[str] = []
+        for tr in table.find_all('tr'):
+            cells = tr.find_all(['th', 'td'])
+            if not cells:
+                continue
+            values = [cell.get_text(strip=True) for cell in cells]
+            if not headers:
+                headers = values
+                continue
+            if not headers:
+                continue
+            while len(values) < len(headers):
+                values.append("")
+            rows.append(values[:len(headers)])
+        if headers:
+            yield headers, rows
 
 
+def _extract_students_from_table(headers: list[str], rows: list[list[str]], class_code: str) -> list[dict[str, object]]:
+    normalized_headers = [normalize(item) for item in headers]
 
+    target_columns = ("org defined id", "orgdefinedid", "username")
+    if not any(keyword in normalized_headers for keyword in target_columns):
+        return []
+    if not any('role' in header for header in normalized_headers):
+        return []
+
+    id_col = find_first_matching_column(headers, target_columns)
+    if id_col is None:
+        return []
+
+    role_col = find_first_matching_column(headers, ("role", "student role"))
+    if role_col is None:
+        return []
+
+    username_col = find_first_matching_column(headers, ("username", "user name", "email"))
+    full_name_col = find_first_matching_column(headers, ("full name", "student name", "name"))
+    first_name_col = find_first_matching_column(headers, ("first name",))
+    last_name_col = find_first_matching_column(headers, ("last name",))
+    last_access_col = find_first_matching_column(headers, ("last accessed", "last accessed date"))
+
+    def row_dict(values: list[str]) -> dict[str, object]:
+        return {header: values[idx] if idx < len(values) else "" for idx, header in enumerate(headers)}
+
+    result: list[dict[str, object]] = []
+    for values in rows:
+        record = row_dict(values)
+        role_value = _coerce_str(record.get(role_col, ""))
+        if "student" not in role_value.lower():
+            continue
+
+        student_id = extract_student_id(record.get(id_col), record.get(username_col) if username_col else None)
+        if not student_id:
+            continue
+
+        if full_name_col:
+            student_name = _coerce_str(record.get(full_name_col)).strip()
+        else:
+            first = _coerce_str(record.get(first_name_col)).strip() if first_name_col else ""
+            last = _coerce_str(record.get(last_name_col)).strip() if last_name_col else ""
+            student_name = (first + " " + last).strip()
+
+        last_access = _coerce_str(record.get(last_access_col)).strip() if last_access_col else ""
+
+        result.append({
+            'Org Defined ID': student_id,
+            'Student Full Name': student_name,
+            'Last Accessed': last_access,
+            'Class Code': class_code or 'UNKNOWN',
+        })
+
+    return result
+
+
+def _collect_class_list_students(class_list_dir_path: str) -> TableData:
+    seed_columns = ['Org Defined ID', 'Student Full Name', 'Last Accessed', 'Class Code']
+    print(f"Processing files in directory: {class_list_dir_path}\n")
+
+    if not class_list_dir_path or not os.path.exists(class_list_dir_path):
+        print(f"ERROR: Class list directory not found: {class_list_dir_path}")
+        return TableData(seed_columns, [])
+
+    file_paths = sorted(glob.glob(os.path.join(class_list_dir_path, '*.html')))
+    if not file_paths:
+        warn_once("WARNING", f"No HTML files found in {class_list_dir_path}")
+        return TableData(seed_columns, [])
+
+    file_count = 0
+    records: list[dict[str, object]] = []
+
+    for filename in file_paths:
+        try:
+            with open(filename, 'r', encoding='utf-8') as handle:
+                soup = BeautifulSoup(handle, 'html.parser')
+        except Exception as exc:
+            print(f"WARNING: Could not open '{filename}': {exc}")
+            continue
+
+        class_code = get_class_code_from_html(soup) or 'UNKNOWN'
+        extracted: list[dict[str, object]] = []
+
+        for headers, rows in _iter_table_headers_and_rows(soup):
+            candidates = _extract_students_from_table(headers, rows, class_code)
+            if candidates:
+                extracted = candidates
+                break
+
+        if not extracted:
+            warn_once("WARNING", f"Could not identify student table in '{filename}'")
+            continue
+
+        records.extend(extracted)
+        file_count += 1
+
+    print(f"Processed {file_count} files successfully\n")
+    return TableData(seed_columns, records)
 
 
 def add_class_list_data(master_df: pd.DataFrame, class_list_dir_path: str) -> pd.DataFrame:
@@ -1488,31 +1764,42 @@ def get_class_code_from_html(soup: BeautifulSoup | None) -> Optional[str]:
 
 def FindDupStudentsInBSViaClassList(
     BSdirectory: str,
-    collect_duplicates: list[pd.DataFrame] | None = None,
+    collect_duplicates: list[TableData] | None = None,
 ) -> bool:
     if not BSdirectory or not os.path.exists(BSdirectory):
         print(f"ERROR: Directory not found: {BSdirectory}")
         return True
 
-    seed_columns = ['Org Defined ID', 'Student Full Name', 'Last Accessed', 'Class Code']
-    filtered_student_df = pd.DataFrame(columns=seed_columns)
-    filtered_student_df = add_class_list_data(filtered_student_df, BSdirectory)
+    student_table = _collect_class_list_students(BSdirectory)
 
-    if filtered_student_df.empty:
+    if student_table.is_empty:
         print("No student data found in any of the HTML files.")
         return True
 
-    duplicates = filtered_student_df[filtered_student_df.duplicated(['Org Defined ID'], keep=False)]
-    if duplicates.empty:
-        duplicates = filtered_student_df[filtered_student_df.duplicated(['Student Full Name'], keep=False)]
+    def detect_duplicates(column_name: str) -> TableData:
+        counts: dict[str, int] = {}
+        for row in student_table.rows:
+            value = _coerce_str(row.get(column_name, "")).strip()
+            if not value:
+                continue
+            counts[value] = counts.get(value, 0) + 1
+        duplicate_rows = [
+            row for row in student_table.rows
+            if counts.get(_coerce_str(row.get(column_name, "")).strip(), 0) > 1
+        ]
+        return TableData(student_table.columns, duplicate_rows)
 
-    if not duplicates.empty:
+    duplicates = detect_duplicates('Org Defined ID')
+    if duplicates.is_empty:
+        duplicates = detect_duplicates('Student Full Name')
+
+    if not duplicates.is_empty:
         print()
         print("Duplicate students found:")
-        sorted_duplicates = duplicates.sort_values(['Student Full Name', 'Org Defined ID'])
-        print(sorted_duplicates.to_string(index=False))
+        sorted_duplicates = duplicates.sorted(['Student Full Name', 'Org Defined ID'])
+        print(sorted_duplicates.to_string())
         if collect_duplicates is not None:
-            collect_duplicates.append(sorted_duplicates.copy())
+            collect_duplicates.append(sorted_duplicates)
         return False
 
     print("No duplicates found in Brightspace class lists")
@@ -1520,11 +1807,32 @@ def FindDupStudentsInBSViaClassList(
 
 
 
+def _extract_ids_from_first_column(file_path: str, column_name: str, base_name: str) -> list[dict[str, object]]:
+    extracted_rows: list[dict[str, object]] = []
+    try:
+        with open(file_path, newline='', encoding='utf-8-sig') as raw_handle:
+            reader = csv.reader(raw_handle)
+            for row in reader:
+                if not row:
+                    continue
+                value = row[0]
+                match = re.search(r'(\d+)', value)
+                if match:
+                    extracted_rows.append({
+                        column_name: match.group(1),
+                        'Student Name': '',
+                        'File Name': base_name,
+                    })
+    except Exception as exc:  # noqa: BLE001
+        print(f"WARNING: Unable to parse '{file_path}' without headers: {exc}")
+    return extracted_rows
+
+
 def FindDupStudentsInBSViaAttendanceGrades(
     target_dir: str,
     column_name: str,
     *,
-    collect_duplicates: list[pd.DataFrame] | None = None,
+    collect_duplicates: list[TableData] | None = None,
     send_notification: bool = True,
 ) -> bool:
     if not target_dir or not os.path.exists(target_dir):
@@ -1539,67 +1847,71 @@ def FindDupStudentsInBSViaAttendanceGrades(
         print(f"No CSV files found in directory: {target_dir}")
         return True
 
-    records: list[pd.DataFrame] = []
+    records: list[dict[str, object]] = []
     processed_count = 0
 
-    for filename in csv_files:
-        file_path = os.path.join(target_dir, os.path.basename(filename))
+    for file_path in csv_files:
+        base_name = os.path.basename(file_path)
+
         try:
-            df = pd.read_csv(file_path)
+            with open(file_path, newline='', encoding='utf-8-sig') as handle:
+                reader = csv.DictReader(handle)
+                rows = [row for row in reader if row]
+                fieldnames = reader.fieldnames or []
         except Exception as exc:  # noqa: BLE001
             print(f"WARNING: Error reading '{file_path}': {exc}")
             continue
 
-        processed_this_file = False
-        id_col = column_name if column_name in df.columns else find_first_matching_column(df, ('orgdefinedid', 'org defined id', 'student id', 'username'))
-
-        if id_col is None:
-            try:
-                raw = pd.read_csv(file_path, header=None)
-            except Exception as exc:  # noqa: BLE001
-                print(f"WARNING: Unable to parse '{file_path}' without headers: {exc}")
-                continue
-
-            extracted_rows = []
-            for value in raw.iloc[:, 0].astype(str):
-                match = re.search(r'(\d+)', value)
-                if match:
-                    extracted_rows.append({column_name: match.group(0), 'File Name': os.path.basename(filename)})
-            if extracted_rows:
-                records.append(pd.DataFrame(extracted_rows))
-                processed_this_file = True
-
-            if processed_this_file:
+        if not fieldnames:
+            extracted = _extract_ids_from_first_column(file_path, column_name, base_name)
+            if extracted:
+                records.extend(extracted)
                 processed_count += 1
             continue
 
-        username_col = find_first_matching_column(df, ('username', 'user name', 'email'))
+        id_col = column_name if column_name in fieldnames else find_first_matching_column(fieldnames, ('orgdefinedid', 'org defined id', 'student id', 'username'))
 
-        def compute_student_id(row):
-            fallback = row[username_col] if username_col else None
-            return extract_student_id(row[id_col], fallback)
-
-        df[column_name] = df.apply(compute_student_id, axis=1)
-        df = df.dropna(subset=[column_name])
-        if df.empty:
-            warn_once('WARNING', f"No valid student identifiers in '{file_path}'")
+        if id_col is None:
+            extracted = _extract_ids_from_first_column(file_path, column_name, base_name)
+            if extracted:
+                records.extend(extracted)
+                processed_count += 1
+            else:
+                warn_once('WARNING', f"Missing identifier column in '{file_path}'")
             continue
 
-        first_name_col = find_first_matching_column(df, ('first name',))
-        last_name_col = find_first_matching_column(df, ('last name',))
+        username_col = find_first_matching_column(fieldnames, ('username', 'user name', 'email'))
+        first_name_col = find_first_matching_column(fieldnames, ('first name',))
+        last_name_col = find_first_matching_column(fieldnames, ('last name',))
+        full_name_col = find_first_matching_column(fieldnames, ('student full name', 'name', 'full name'))
 
-        if first_name_col and last_name_col:
-            df['Student Name'] = (df[first_name_col].astype(str).fillna('') + ' ' + df[last_name_col].astype(str).fillna('')).str.strip()
-        else:
-            name_col = find_first_matching_column(df, ('student full name', 'name', 'full name'))
-            df['Student Name'] = df[name_col] if name_col else ''
+        processed_this_file = False
+        for row in rows:
+            student_id = extract_student_id(row.get(id_col), row.get(username_col) if username_col else None)
+            if not student_id:
+                continue
 
-        df['File Name'] = os.path.basename(filename)
-        records.append(df[[column_name, 'Student Name', 'File Name']])
-        processed_this_file = True
+            if full_name_col:
+                student_name = _coerce_str(row.get(full_name_col)).strip()
+            else:
+                first = _coerce_str(row.get(first_name_col)).strip() if first_name_col else ""
+                last = _coerce_str(row.get(last_name_col)).strip() if last_name_col else ""
+                if first or last:
+                    student_name = (first + " " + last).strip()
+                else:
+                    student_name = _coerce_str(row.get(username_col)).strip() if username_col else ""
+
+            records.append({
+                column_name: student_id,
+                'Student Name': student_name,
+                'File Name': base_name,
+            })
+            processed_this_file = True
 
         if processed_this_file:
             processed_count += 1
+        else:
+            warn_once('WARNING', f"No valid student identifiers in '{file_path}'")
 
     print()
     print(f"Processed {processed_count} files successfully")
@@ -1608,20 +1920,23 @@ def FindDupStudentsInBSViaAttendanceGrades(
         print(f"No files with required columns found in directory: {target_dir}")
         return True
 
-    combined_df = pd.concat(records, ignore_index=True)
-    duplicates = combined_df[combined_df.duplicated(subset=column_name, keep=False)]
+    counts = Counter(_coerce_str(row.get(column_name, "")).strip() for row in records if _coerce_str(row.get(column_name, "")).strip())
+    duplicate_rows = [
+        row for row in records
+        if counts.get(_coerce_str(row.get(column_name, "")).strip(), 0) > 1
+    ]
 
-    if duplicates.empty:
+    if not duplicate_rows:
         print('No duplicates found in Brightspace classes - checked via Attendance or Grades')
         return True
 
     print()
     print('Found duplicate student IDs:')
-    sorted_duplicates = duplicates.sort_values(by=column_name)
-    print(sorted_duplicates.to_string(index=False))
+    duplicates_table = TableData([column_name, 'Student Name', 'File Name'], duplicate_rows).sorted([column_name, 'Student Name'])
+    print(duplicates_table.to_string())
 
     if collect_duplicates is not None:
-        collect_duplicates.append(sorted_duplicates.copy())
+        collect_duplicates.append(duplicates_table)
 
     if send_notification:
         send_duplicate_notification(
@@ -1631,7 +1946,7 @@ def FindDupStudentsInBSViaAttendanceGrades(
                 'I ran a report today, and the following students are registered in one or more classes in BrightSpace. '
                 'Please check and remove duplicates. Thank you.'
             ),
-            duplicates=sorted_duplicates,
+            duplicates=duplicates_table,
             closing_html='Sincerely, <br>Ramzan Khuwaja',
         )
 

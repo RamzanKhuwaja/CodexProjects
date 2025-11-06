@@ -37,8 +37,8 @@ def run_class_list():
     else:
         print(f"WARNING: Exiting Check on FindDupStudentsIn {CAMPUS} BSViaClassList.")
 
-    duplicates_df = duplicates_bucket[0] if duplicates_bucket else None
-    return result, duplicates_df
+    duplicates_table = duplicates_bucket[0] if duplicates_bucket else None
+    return result, duplicates_table
 
 
 def run_attendance():
@@ -61,8 +61,8 @@ def run_attendance():
     else:
         print(f"WARNING: Exiting {CAMPUS} DupStudentsInBSViaAttendance.")
 
-    duplicates_df = duplicates_bucket[0] if duplicates_bucket else None
-    return result, duplicates_df
+    duplicates_table = duplicates_bucket[0] if duplicates_bucket else None
+    return result, duplicates_table
 
 
 def run_grades():
@@ -85,8 +85,8 @@ def run_grades():
     else:
         print(f"WARNING: Exiting {CAMPUS} DupStudentsInBSViaGrades.")
 
-    duplicates_df = duplicates_bucket[0] if duplicates_bucket else None
-    return result, duplicates_df
+    duplicates_table = duplicates_bucket[0] if duplicates_bucket else None
+    return result, duplicates_table
 
 
 CHECKS = [
@@ -113,7 +113,7 @@ def main() -> bool:
     for name, runner, target in CHECKS:
         print(f"Entering {name}\n")
         try:
-            result, duplicates_df = runner()
+            result, duplicates_table = runner()
         except Exception as exc:  # noqa: BLE001
             print(f"ERROR: {name} failed: {exc}\n")
             overall_success = False
@@ -124,8 +124,8 @@ def main() -> bool:
         else:
             print(f"Duplicates found! Please check {target}.\n")
             duplicate_alerts.append((name, target))
-            if duplicates_df is not None:
-                duplicate_sections.append((name, duplicates_df))
+            if duplicates_table is not None:
+                duplicate_sections.append((name, duplicates_table))
             overall_success = False
 
         print(f"Exiting {name}\n")
@@ -134,15 +134,19 @@ def main() -> bool:
         required_columns = ['Org Defined ID', 'Student Full Name', 'Last Accessed', 'Class Code']
         details_parts: list[str] = []
 
-        for check_name, duplicates_df in duplicate_sections:
-            if hasattr(duplicates_df, 'to_html') and all(col in duplicates_df.columns for col in required_columns):
-                trimmed = duplicates_df[required_columns].drop_duplicates().reset_index(drop=True)
-                table_html = utils.render_html_table(
-                    trimmed,
-                    subtitle='Please review and remove extra enrollments.',
-                )
-                if table_html:
-                    details_parts.append(table_html)
+        for check_name, duplicates_data in duplicate_sections:
+            table = utils.ensure_table_data(duplicates_data, required_columns)
+            if table is None or table.is_empty:
+                continue
+            if not all(col in table.columns for col in required_columns):
+                continue
+            trimmed = table.select(required_columns).drop_duplicates(required_columns)
+            table_html = utils.render_html_table(
+                trimmed,
+                subtitle='Please review and remove extra enrollments.',
+            )
+            if table_html:
+                details_parts.append(table_html)
 
         if not details_parts:
             list_items = ''.join(f'<li>{check_name} - {target}</li>' for check_name, target in duplicate_alerts)
