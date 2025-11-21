@@ -11,6 +11,22 @@ import Common.my_utils as utils
 
 CAMPUS = "VAU"
 
+def ensure_dataframe(data):
+    """
+    Return a pandas DataFrame copy for any tabular input supported by utils.ensure_table_data.
+    Handles TableData objects coming back from utils duplicate checks.
+    """
+    if data is None:
+        return None
+    if isinstance(data, pd.DataFrame):
+        return data.copy()
+    if isinstance(data, utils.TableData):
+        return pd.DataFrame(data.to_records(), columns=data.columns)
+    table = utils.ensure_table_data(data)
+    if table is None:
+        return None
+    return pd.DataFrame(table.to_records(), columns=table.columns)
+
 
 def derive_export_key(file_path: Path, dataset_type: str) -> tuple[str, str] | None:
     stem = file_path.stem.strip()
@@ -113,6 +129,7 @@ def extract_notices(captured: str) -> tuple[list[str], list[str], list[str]]:
 
 
 def format_dataframe_preview(df, *, max_rows: int = 10) -> list[str]:
+    df = ensure_dataframe(df)
     if df is None or df.empty:
         return ["(no duplicate details available)"]
 
@@ -150,6 +167,7 @@ def find_column(df, candidates: Iterable[str]) -> str | None:
 
 
 def diagnose_duplicates(dataset_type: str, duplicates_df, exports: list[dict[str, Any]]) -> list[str]:
+    duplicates_df = ensure_dataframe(duplicates_df)
     if duplicates_df is None or duplicates_df.empty:
         return []
 
@@ -215,6 +233,7 @@ def print_section_header(index: int, total: int, title: str) -> None:
 
 
 def calculate_duplicate_summary(df) -> str:
+    df = ensure_dataframe(df)
     if df is None or df.empty:
         return "no detail rows captured"
 
@@ -226,6 +245,7 @@ def calculate_duplicate_summary(df) -> str:
 
 
 def prepare_duplicate_rows(source_label: str, duplicates_df) -> pd.DataFrame:
+    duplicates_df = ensure_dataframe(duplicates_df)
     if duplicates_df is None or duplicates_df.empty:
         return pd.DataFrame()
 
@@ -303,8 +323,8 @@ def run_class_list() -> dict[str, Any]:
 
     warnings, errors, notes = extract_notices(captured)
     duplicates_df = duplicates_bucket[0] if duplicates_bucket else None
+    duplicates_df = ensure_dataframe(duplicates_df)
     if duplicates_df is not None:
-        duplicates_df = duplicates_df.copy()
         duplicates_df["Source"] = dataset_type
     return {
         "success": result,
@@ -346,8 +366,8 @@ def run_attendance() -> dict[str, Any]:
 
     warnings, errors, notes = extract_notices(captured)
     duplicates_df = duplicates_bucket[0] if duplicates_bucket else None
+    duplicates_df = ensure_dataframe(duplicates_df)
     if duplicates_df is not None:
-        duplicates_df = duplicates_df.copy()
         duplicates_df["Source"] = dataset_type
     return {
         "success": result,
@@ -389,8 +409,8 @@ def run_grades() -> dict[str, Any]:
 
     warnings, errors, notes = extract_notices(captured)
     duplicates_df = duplicates_bucket[0] if duplicates_bucket else None
+    duplicates_df = ensure_dataframe(duplicates_df)
     if duplicates_df is not None:
-        duplicates_df = duplicates_df.copy()
         duplicates_df["Source"] = dataset_type
     return {
         "success": result,
