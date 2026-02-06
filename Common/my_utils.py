@@ -181,9 +181,10 @@ except ImportError:
 #   use only when doing a new run with 3 files only
 DEBUG = False  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
               # Set to True to use debugging paths (with limited # of files), False for production paths
-TESTING = True    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
+TESTING = True
+    #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
                   #  This is NOR DEBUGGING!  This uses all data before sending to teachers
-THIS_WEEK_NUM = 12 #  <======  Change this every week!!!!!!!!!!!!!
+THIS_WEEK_NUM = 21 #  <======  Change this every week!!!!!!!!!!!!!
 
 SEND_EMAIL = True
 PRINT_REPORT = True
