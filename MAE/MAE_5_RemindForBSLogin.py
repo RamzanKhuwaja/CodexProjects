@@ -81,12 +81,14 @@ def main() -> bool:
     emails_ok = email_to_remind_students(df_remind_students)
     export_ok = utils.export_student_reminder_to_excel(df_remind_students, CAMPUS)
 
-    if not emails_ok or not export_ok:
+    if not export_ok:
         print(f"ERROR: Unable to process reminder report for {CAMPUS}.")
         return False
+    if not emails_ok:
+        print(f"WARNING: Reminder emails were not sent for {CAMPUS}.")
 
     print(f"WARNING: Exiting {CAMPUS} RemindForBSLogin with pending reminders")
-    return False
+    return True
 
 
 if __name__ == "__main__":

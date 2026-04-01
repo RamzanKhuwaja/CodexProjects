@@ -442,7 +442,8 @@ def main() -> bool:
     except Exception as exc:  # noqa: BLE001
         print(f"WARNING: Unable to set campus info for {CAMPUS}: {exc}")
 
-    overall_success = True
+    execution_ok = True
+    had_findings = False
     duplicate_alerts: list[tuple[str, str]] = []
     combined_duplicates: list[pd.DataFrame] = []
     diagnosis_notes: list[str] = []
@@ -455,7 +456,7 @@ def main() -> bool:
             outcome = runner()
         except Exception as exc:  # noqa: BLE001
             print(f"  ERROR: {name} failed unexpectedly: {exc}")
-            overall_success = False
+            execution_ok = False
             continue
 
         dataset_type = outcome.get("dataset_type")
@@ -463,7 +464,7 @@ def main() -> bool:
 
         for error in outcome.get("errors", []):
             print(f"  ERROR: {error}")
-            overall_success = False
+            execution_ok = False
 
         for warning in outcome.get("warnings", []):
             print(f"  WARNING: {warning}")
@@ -488,7 +489,7 @@ def main() -> bool:
         if success:
             print(f"  OK: no duplicates found in {target}.")
         else:
-            overall_success = False
+            had_findings = True
             duplicate_alerts.append((name, target))
 
             summary = calculate_duplicate_summary(duplicates_df)
@@ -533,7 +534,7 @@ def main() -> bool:
             list_items = ''.join(f'<li>{check_name} - {target}</li>' for check_name, target in duplicate_alerts)
             details_parts.append(f'<ul>{list_items}</ul>')
 
-        utils.send_duplicate_notification(
+        notification_sent = utils.send_duplicate_notification(
             subject=f'{CAMPUS} Brightspace duplicates detected',
             intro_html=(
                 'Hello Office, <br><br>'
@@ -543,10 +544,14 @@ def main() -> bool:
             details_html=''.join(details_parts),
             closing_html='Sincerely, <br>Ramzan Khuwaja',
         )
+        if not notification_sent:
+            print("WARNING: Duplicate notification email was not sent.")
 
     print("\nAll checks complete.")
     print("=" * 56)
-    return overall_success
+    if had_findings:
+        print("Completed with duplicate findings.")
+    return execution_ok
 
 
 if __name__ == "__main__":

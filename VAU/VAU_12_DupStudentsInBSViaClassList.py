@@ -22,9 +22,10 @@ def main() -> bool:
 
     if result:
         print(f"Exiting Check on FindDupStudentsIn {CAMPUS} BSViaClassList.")
+        return True
     else:
         print(f"WARNING: Exiting Check on FindDupStudentsIn {CAMPUS} BSViaClassList.")
-    return result
+        return True
 
 
 if __name__ == "__main__":

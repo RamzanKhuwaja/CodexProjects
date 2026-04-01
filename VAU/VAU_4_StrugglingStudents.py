@@ -130,12 +130,14 @@ def main() -> bool:
     emails_ok = email_struggling_students_to_stakeholders(df_struggling_students)
     export_ok = utils.export_struggling_students_to_excel(df_struggling_students, CAMPUS)
 
-    if not emails_ok or not export_ok:
+    if not export_ok:
         print(f"ERROR: Unable to process struggling students for {CAMPUS}.")
         return False
+    if not emails_ok:
+        print(f"WARNING: Struggling student emails were not sent for {CAMPUS}.")
 
     print(f"WARNING: Found struggling students - Exiting {CAMPUS} StrugglingStudents")
-    return False
+    return True
 
 
 if __name__ == "__main__":

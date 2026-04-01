@@ -6,6 +6,7 @@ import time
 import csv
 import math
 import html
+from io import StringIO
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -15,7 +16,12 @@ from collections import Counter
 import glob
 import numpy as np
 import openpyxl
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+    _BS4_IMPORT_ERROR: Exception | None = None
+except Exception as exc:  # noqa: BLE001
+    BeautifulSoup = None  # type: ignore[assignment]
+    _BS4_IMPORT_ERROR = exc
 import win32com.client as email_client
 
 try:
@@ -27,6 +33,17 @@ except Exception as exc:  # noqa: BLE001
 
 
 PANDAS_AVAILABLE = _PANDAS_IMPORT_ERROR is None
+BS4_AVAILABLE = _BS4_IMPORT_ERROR is None
+
+
+def _ensure_bs4(context: str) -> bool:
+    if BS4_AVAILABLE:
+        return True
+    print(
+        f"ERROR: BeautifulSoup dependency (bs4) is required for {context}. "
+        "Install it with: python -m pip install beautifulsoup4"
+    )
+    return False
 
 
 def is_missing(value: object) -> bool:
@@ -172,8 +189,6 @@ def ensure_table_data(data: object, default_columns: Sequence[str] | None = None
 try:
     import pdfkit
 except ImportError:
-    print("Warning: pdfkit module not found. PDF functionality will not be available.")
-    print("To install, run: pip install pdfkit")
     pdfkit = None
 
 # Debug flag to control which paths to use
@@ -181,10 +196,10 @@ except ImportError:
 #   use only when doing a new run with 3 files only
 DEBUG = False  #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
               # Set to True to use debugging paths (with limited # of files), False for production paths
-TESTING = True
+TESTING = False
     #  <======  Be CAREFUL with this switch!!!!!!!!!!!!!
                   #  This is NOR DEBUGGING!  This uses all data before sending to teachers
-THIS_WEEK_NUM = 21 #  <======  Change this every week!!!!!!!!!!!!!
+THIS_WEEK_NUM = 27 #  <======  Change this every week!!!!!!!!!!!!!
 
 SEND_EMAIL = True
 PRINT_REPORT = True
@@ -212,6 +227,8 @@ SUPPORTED_DATE_FORMATS = [
 CLASS_CODE_REGEX = re.compile(r"(?:SOMp|MAE)\w+", re.IGNORECASE)
 
 _WARNED_MESSAGES: set[tuple[str, str]] = set()
+_OUTLOOK_APP = None
+_OUTLOOK_CONNECTION_FAILED = False
 
 
 def warn_once(level: str, message: str) -> None:
@@ -219,6 +236,24 @@ def warn_once(level: str, message: str) -> None:
     if key not in _WARNED_MESSAGES:
         print(f"{level}: {message}")
         _WARNED_MESSAGES.add(key)
+
+
+def _get_outlook_app():
+    global _OUTLOOK_APP, _OUTLOOK_CONNECTION_FAILED
+
+    if _OUTLOOK_CONNECTION_FAILED:
+        return None
+    if _OUTLOOK_APP is not None:
+        return _OUTLOOK_APP
+
+    try:
+        _OUTLOOK_APP = email_client.Dispatch("outlook.application")
+    except Exception as exc:
+        _OUTLOOK_CONNECTION_FAILED = True
+        warn_once("ERROR", f"Unable to connect to Outlook to send email: {exc}")
+        return None
+
+    return _OUTLOOK_APP
 
 
 
@@ -915,10 +950,8 @@ def send_email(to: str | None, cc: str | None, subject: str, body: str) -> bool:
         warn_once("WARNING", "No primary recipient specified for email; skipping send.")
         return False
 
-    try:
-        outlook = email_client.Dispatch("outlook.application")
-    except Exception as exc:
-        print(f"ERROR: Unable to connect to Outlook to send email: {exc}")
+    outlook = _get_outlook_app()
+    if outlook is None:
         return False
 
     try:
@@ -934,6 +967,8 @@ def send_email(to: str | None, cc: str | None, subject: str, body: str) -> bool:
         time.sleep(2)
         return True
     except Exception as exc:
+        global _OUTLOOK_APP
+        _OUTLOOK_APP = None
         print(f"ERROR: Failed to send email via Outlook: {exc}")
         return False
 
@@ -1409,6 +1444,138 @@ def _extract_students_from_table(headers: list[str], rows: list[list[str]], clas
     return result
 
 
+def _read_html_text(filename: str) -> str | None:
+    for encoding in ("utf-8", "utf-8-sig", "cp1252"):
+        try:
+            with open(filename, 'r', encoding=encoding) as handle:
+                return handle.read()
+        except UnicodeDecodeError:
+            continue
+        except Exception as exc:
+            print(f"WARNING: Could not open '{filename}': {exc}")
+            return None
+
+    print(f"WARNING: Could not decode '{filename}' with supported encodings")
+    return None
+
+
+def _read_html_tables(filename: str, html_text: str) -> list[pd.DataFrame]:
+    last_error: Exception | None = None
+
+    for source in (StringIO(html_text), filename):
+        try:
+            return pd.read_html(source, encoding='utf-8')
+        except ValueError:
+            continue
+        except Exception as exc:
+            last_error = exc
+
+    if last_error is not None:
+        print(f"WARNING: Failed to read tables from '{filename}': {last_error}")
+    else:
+        warn_once("WARNING", f"No tables found in class list file '{filename}'")
+
+    return []
+
+
+def _find_student_table_from_tables(tables: list[pd.DataFrame]) -> pd.DataFrame | None:
+    target_columns = ("org defined id", "orgdefinedid", "username")
+
+    for table in tables:
+        table = table.dropna(axis=1, how='all')
+        table = table.dropna(how='all')
+        if table.empty:
+            continue
+
+        table.columns = [str(col).strip() for col in table.columns]
+        normalized_columns = [normalize(col) for col in table.columns]
+
+        if not any(keyword in normalized_columns for keyword in target_columns):
+            header_index = None
+            header_values: list[str] | None = None
+            for idx, row in table.iterrows():
+                normalized_row = [normalize(value) for value in row]
+                if any(keyword in value for value in normalized_row for keyword in target_columns):
+                    header_index = idx
+                    header_values = [str(value).strip() for value in row]
+                    break
+            if header_index is not None and header_values is not None:
+                table = table.iloc[header_index + 1:].reset_index(drop=True)
+                table.columns = header_values
+                normalized_columns = [normalize(col) for col in table.columns]
+
+        if any(keyword in normalized_columns for keyword in target_columns):
+            if table.empty:
+                continue
+            if not any('role' in col for col in normalized_columns):
+                continue
+            return table
+
+    return None
+
+
+def _extract_students_from_dataframe(student_table: pd.DataFrame, class_code: str, filename: str) -> list[dict[str, object]]:
+    role_col = find_first_matching_column(student_table, ("role", "student role"))
+    if role_col is None:
+        warn_once("WARNING", f"Missing role column in '{filename}'")
+        return []
+
+    student_rows = student_table[student_table[role_col].astype(str).str.contains('student', case=False, na=False)]
+    if student_rows.empty:
+        warn_once("WARNING", f"No student rows found in '{filename}'")
+        return []
+
+    id_col = find_first_matching_column(student_table, ("org defined id", "orgdefinedid", "username", "user id"))
+    if id_col is None:
+        warn_once("WARNING", f"Missing Org Defined ID column in '{filename}'")
+        return []
+
+    full_name_col = find_first_matching_column(student_table, ("full name", "student name", "name"))
+    first_name_col = find_first_matching_column(student_table, ("first name",))
+    last_name_col = find_first_matching_column(student_table, ("last name",))
+
+    if full_name_col is not None:
+        name_series = student_rows[full_name_col].astype(str)
+    else:
+        first_series = student_rows[first_name_col].astype(str) if first_name_col else pd.Series([''] * len(student_rows))
+        last_series = student_rows[last_name_col].astype(str) if last_name_col else pd.Series([''] * len(student_rows))
+        name_series = (first_series.fillna('') + ' ' + last_series.fillna('')).str.strip()
+
+    last_accessed_col = find_first_matching_column(student_table, ("last accessed", "last access", "last login", "last activity"))
+    if last_accessed_col is None:
+        warn_once("WARNING", f"Missing last accessed column in '{filename}'")
+        return []
+
+    username_col = find_first_matching_column(student_table, ("username", "user name", "email"))
+    if username_col:
+        fallback_values = student_rows[username_col]
+    else:
+        fallback_values = [None] * len(student_rows)
+
+    org_ids = [
+        extract_student_id(primary, fallback)
+        for primary, fallback in zip(student_rows[id_col], fallback_values)
+    ]
+
+    student_data = pd.DataFrame({
+        'Org Defined ID': org_ids,
+        'Student Full Name': name_series,
+        'Last Accessed': student_rows[last_accessed_col],
+        'Class Code': class_code,
+    })
+
+    student_data = student_data.dropna(subset=['Org Defined ID'])
+    if student_data.empty:
+        warn_once("WARNING", f"No valid student IDs found in '{filename}'")
+        return []
+
+    student_data['Org Defined ID'] = student_data['Org Defined ID'].astype(str)
+    student_data['Last Accessed'] = student_data['Last Accessed'].apply(
+        lambda value: convert_date_format(value, 'class list last accessed')
+    )
+    return student_data.to_dict(orient='records')
+
+
 def _collect_class_list_students(class_list_dir_path: str) -> TableData:
     seed_columns = ['Org Defined ID', 'Student Full Name', 'Last Accessed', 'Class Code']
     print(f"Processing files in directory: {class_list_dir_path}\n")
@@ -1426,21 +1593,15 @@ def _collect_class_list_students(class_list_dir_path: str) -> TableData:
     records: list[dict[str, object]] = []
 
     for filename in file_paths:
-        try:
-            with open(filename, 'r', encoding='utf-8') as handle:
-                soup = BeautifulSoup(handle, 'html.parser')
-        except Exception as exc:
-            print(f"WARNING: Could not open '{filename}': {exc}")
+        html_text = _read_html_text(filename)
+        if html_text is None:
             continue
 
-        class_code = get_class_code_from_html(soup) or 'UNKNOWN'
-        extracted: list[dict[str, object]] = []
-
-        for headers, rows in _iter_table_headers_and_rows(soup):
-            candidates = _extract_students_from_table(headers, rows, class_code)
-            if candidates:
-                extracted = candidates
-                break
+        soup = BeautifulSoup(html_text, 'html.parser') if BS4_AVAILABLE else None
+        class_code = get_class_code_from_html(soup or html_text) or 'UNKNOWN'
+        tables = _read_html_tables(filename, html_text)
+        student_table = _find_student_table_from_tables(tables)
+        extracted = _extract_students_from_dataframe(student_table, class_code, filename) if student_table is not None else []
 
         if not extracted:
             warn_once("WARNING", f"Could not identify student table in '{filename}'")
@@ -1469,118 +1630,24 @@ def add_class_list_data(master_df: pd.DataFrame, class_list_dir_path: str) -> pd
     file_count = 0
 
     for filename in file_paths:
-        try:
-            with open(filename, 'r', encoding='utf-8') as handle:
-                soup = BeautifulSoup(handle, 'html.parser')
-        except Exception as exc:
-            print(f"WARNING: Could not open '{filename}': {exc}")
+        html_text = _read_html_text(filename)
+        if html_text is None:
             continue
 
-        class_code = get_class_code_from_html(soup) or 'UNKNOWN'
-
-        try:
-            tables = pd.read_html(filename, encoding='utf-8')
-        except ValueError:
-            warn_once("WARNING", f"No tables found in class list file '{filename}'")
-            continue
-        except Exception as exc:
-            print(f"WARNING: Failed to read tables from '{filename}': {exc}")
-            continue
-
-        target_columns = ("org defined id", "orgdefinedid", "username")
-
-        student_table = None
-        for table in tables:
-            table = table.dropna(axis=1, how='all')
-            table = table.dropna(how='all')
-            if table.empty:
-                continue
-
-            table.columns = [str(col).strip() for col in table.columns]
-            normalized_columns = [normalize(col) for col in table.columns]
-
-            if not any(keyword in normalized_columns for keyword in target_columns):
-                header_index = None
-                for idx, row in table.iterrows():
-                    normalized_row = [normalize(value) for value in row]
-                    if any(keyword in value for value in normalized_row for keyword in target_columns):
-                        header_index = idx
-                        header_values = [str(value).strip() for value in row]
-                        break
-                if header_index is not None:
-                    table = table.iloc[header_index + 1:].reset_index(drop=True)
-                    table.columns = header_values
-                    normalized_columns = [normalize(col) for col in table.columns]
-
-            if any(keyword in normalized_columns for keyword in target_columns):
-                if table.empty:
-                    continue
-                if not any('role' in col for col in normalized_columns):
-                    continue
-                student_table = table
-                break
+        soup = BeautifulSoup(html_text, 'html.parser') if BS4_AVAILABLE else None
+        class_code = get_class_code_from_html(soup or html_text) or 'UNKNOWN'
+        tables = _read_html_tables(filename, html_text)
+        student_table = _find_student_table_from_tables(tables)
 
         if student_table is None:
             warn_once("WARNING", f"Could not identify student table in '{filename}'")
             continue
 
-        role_col = find_first_matching_column(student_table, ("role", "student role"))
-        if role_col is None:
-            warn_once("WARNING", f"Missing role column in '{filename}'")
+        records = _extract_students_from_dataframe(student_table, class_code, filename)
+        if not records:
             continue
 
-        student_rows = student_table[student_table[role_col].astype(str).str.contains('student', case=False, na=False)]
-        if student_rows.empty:
-            warn_once("WARNING", f"No student rows found in '{filename}'")
-            continue
-
-        id_col = find_first_matching_column(student_table, ("org defined id", "orgdefinedid", "username", "user id"))
-        if id_col is None:
-            warn_once("WARNING", f"Missing Org Defined ID column in '{filename}'")
-            continue
-
-        full_name_col = find_first_matching_column(student_table, ("full name", "student name", "name"))
-        first_name_col = find_first_matching_column(student_table, ("first name",))
-        last_name_col = find_first_matching_column(student_table, ("last name",))
-
-        if full_name_col is not None:
-            name_series = student_rows[full_name_col].astype(str)
-        else:
-            first_series = student_rows[first_name_col].astype(str) if first_name_col else pd.Series([''] * len(student_rows))
-            last_series = student_rows[last_name_col].astype(str) if last_name_col else pd.Series([''] * len(student_rows))
-            name_series = (first_series.fillna('') + ' ' + last_series.fillna('')).str.strip()
-
-        last_accessed_col = find_first_matching_column(student_table, ("last accessed", "last access", "last login", "last activity"))
-        if last_accessed_col is None:
-            warn_once("WARNING", f"Missing last accessed column in '{filename}'")
-            continue
-
-        username_col = find_first_matching_column(student_table, ("username", "user name", "email"))
-        if username_col:
-            fallback_values = student_rows[username_col]
-        else:
-            fallback_values = [None] * len(student_rows)
-
-        org_ids = [
-            extract_student_id(primary, fallback)
-            for primary, fallback in zip(student_rows[id_col], fallback_values)
-        ]
-
-        student_data = pd.DataFrame({
-            'Org Defined ID': org_ids,
-            'Student Full Name': name_series,
-            'Last Accessed': student_rows[last_accessed_col],
-            'Class Code': class_code
-        })
-
-        student_data = student_data.dropna(subset=['Org Defined ID'])
-        if student_data.empty:
-            warn_once("WARNING", f"No valid student IDs found in '{filename}'")
-            continue
-
-        student_data['Org Defined ID'] = student_data['Org Defined ID'].astype(str)
-        student_data['Last Accessed'] = student_data['Last Accessed'].apply(lambda value: convert_date_format(value, 'class list last accessed'))
-
+        student_data = pd.DataFrame.from_records(records)
         master_df = pd.concat([master_df, student_data], ignore_index=True)
         file_count += 1
 
@@ -1689,31 +1756,38 @@ def get_grades_data(grades_dir: str) -> pd.DataFrame:
             fallback = row[username_col] if username_col else None
             return extract_student_id(row[id_col], fallback)
 
-        df['OrgDefinedId'] = df.apply(compute_student_id, axis=1)
-        df = df.dropna(subset=['OrgDefinedId'])
-        if df.empty:
+        org_ids = df.apply(compute_student_id, axis=1)
+        valid_mask = org_ids.notna()
+        if not valid_mask.any():
             warn_once("WARNING", f"No valid OrgDefinedId entries in '{filename}'")
             continue
 
-        df['OrgDefinedId'] = df['OrgDefinedId'].astype(str)
+        filtered = df.loc[valid_mask]
+        org_ids = org_ids.loc[valid_mask].astype(str)
 
         parent_email_col = find_first_matching_column(df, ("parent email", "parentemail", "email"))
         if parent_email_col is not None:
-            df['Parent Email'] = df[parent_email_col]
+            parent_email = filtered[parent_email_col]
         else:
-            df['Parent Email'] = None
+            parent_email = pd.Series([None] * len(filtered), index=filtered.index, dtype='object')
 
         start_week_col = find_first_matching_column(df, ("enrolment start week points grade", "start week"))
         if start_week_col is not None:
-            df['Start Week'] = pd.to_numeric(df[start_week_col], errors='coerce').fillna(-1).astype('int64')
+            start_week = pd.to_numeric(filtered[start_week_col], errors='coerce').fillna(-1).astype('int64')
         else:
-            df['Start Week'] = -1
+            start_week = pd.Series([-1] * len(filtered), index=filtered.index, dtype='int64')
 
-        df['Final Grade'] = df.apply(calculate_final_grade, axis=1).astype(int)
-        df['Class Code'] = os.path.splitext(os.path.basename(filename))[0]
+        final_grade = filtered.apply(calculate_final_grade, axis=1).astype(int)
+        class_code = os.path.splitext(os.path.basename(filename))[0]
 
-        keep_cols = ['OrgDefinedId', 'Class Code', 'Parent Email', 'Start Week', 'Final Grade']
-        frames.append(df[keep_cols])
+        result = pd.DataFrame({
+            'OrgDefinedId': org_ids.to_numpy(),
+            'Class Code': class_code,
+            'Parent Email': parent_email.to_numpy(),
+            'Start Week': start_week.to_numpy(),
+            'Final Grade': final_grade.to_numpy(),
+        })
+        frames.append(result)
 
     if not frames:
         print("No grades data found")
@@ -1724,9 +1798,9 @@ def get_grades_data(grades_dir: str) -> pd.DataFrame:
     return grades_df
 
 
-def get_class_code_from_html(soup: BeautifulSoup | None) -> Optional[str]:
-    """Extract a class code from the supplied HTML soup."""
-    if soup is None:
+def get_class_code_from_html(document: object | None) -> Optional[str]:
+    """Extract a class code from HTML content or a BeautifulSoup document."""
+    if document is None:
         return None
 
     def _match_code(candidate: str | None) -> Optional[str]:
@@ -1737,25 +1811,36 @@ def get_class_code_from_html(soup: BeautifulSoup | None) -> Optional[str]:
             return match.group(0)
         return None
 
-    # Try key navigation and title elements first
-    for element in [
-        soup.find('a', class_='d2l-navigation-s-link'),
-        soup.find('div', class_='d2l-navigation-s-main-wrapper'),
-        soup.find('title'),
-    ]:
-        if element:
-            code = _match_code(element.get_text(strip=True))
+    if BS4_AVAILABLE and hasattr(document, 'find'):
+        soup = document
+        for element in [
+            soup.find('a', class_='d2l-navigation-s-link'),
+            soup.find('div', class_='d2l-navigation-s-main-wrapper'),
+            soup.find('title'),
+        ]:
+            if element:
+                code = _match_code(element.get_text(strip=True))
+                if code:
+                    return code
+
+        for tag in soup.find_all(['a', 'span', 'div']):
+            code = _match_code(tag.get_text(strip=True))
             if code:
                 return code
 
-    # Search other textual elements if direct match not found
-    for tag in soup.find_all(['a', 'span', 'div']):
-        code = _match_code(tag.get_text(strip=True))
+        code = _match_code(soup.get_text())
         if code:
             return code
 
-    # Fallback to scanning the entire HTML text
-    code = _match_code(soup.get_text())
+    raw_html = _coerce_str(document)
+    title_match = re.search(r'<title[^>]*>(.*?)</title>', raw_html, flags=re.IGNORECASE | re.DOTALL)
+    if title_match:
+        code = _match_code(html.unescape(re.sub(r'<[^>]+>', ' ', title_match.group(1))))
+        if code:
+            return code
+
+    text_content = html.unescape(re.sub(r'<[^>]+>', ' ', raw_html))
+    code = _match_code(text_content)
     if code:
         return code
 

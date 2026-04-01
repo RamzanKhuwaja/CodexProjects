@@ -30,7 +30,7 @@ def main() -> bool:
         return False
 
     print(f"WARNING: Found missing attendance - Exiting {CAMPUS} AttendanceMissing")
-    return False
+    return True
 
 
 if __name__ == "__main__":

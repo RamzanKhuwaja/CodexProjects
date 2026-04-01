@@ -106,7 +106,8 @@ def main() -> bool:
     except Exception as exc:  # noqa: BLE001
         print(f"WARNING: Unable to set campus info for {CAMPUS} prior to running checks: {exc}")
 
-    overall_success = True
+    execution_ok = True
+    had_findings = False
     duplicate_alerts: list[tuple[str, str]] = []
     duplicate_sections: list[tuple[str, object]] = []
 
@@ -116,7 +117,7 @@ def main() -> bool:
             result, duplicates_table = runner()
         except Exception as exc:  # noqa: BLE001
             print(f"ERROR: {name} failed: {exc}\n")
-            overall_success = False
+            execution_ok = False
             continue
 
         if result:
@@ -126,7 +127,7 @@ def main() -> bool:
             duplicate_alerts.append((name, target))
             if duplicates_table is not None:
                 duplicate_sections.append((name, duplicates_table))
-            overall_success = False
+            had_findings = True
 
         print(f"Exiting {name}\n")
 
@@ -152,7 +153,7 @@ def main() -> bool:
             list_items = ''.join(f'<li>{check_name} - {target}</li>' for check_name, target in duplicate_alerts)
             details_parts.append(f'<ul>{list_items}</ul>')
 
-        utils.send_duplicate_notification(
+        notification_sent = utils.send_duplicate_notification(
             subject='MAE Brightspace duplicates detected',
             intro_html=(
                 'Hello Office, <br><br>'
@@ -162,10 +163,14 @@ def main() -> bool:
             details_html=''.join(details_parts),
             closing_html='Sincerely, <br>Ramzan Khuwaja',
         )
+        if not notification_sent:
+            print("WARNING: Duplicate notification email was not sent.")
 
     print("Exiting main - MAECheckAllDups\n")
     print("===========================================\n")
-    return overall_success
+    if had_findings:
+        print("Completed with duplicate findings.\n")
+    return execution_ok
 
 
 if __name__ == "__main__":

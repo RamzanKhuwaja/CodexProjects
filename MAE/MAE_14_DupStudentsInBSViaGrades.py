@@ -16,16 +16,21 @@ def main() -> bool:
 
     print(f"Entering {CAMPUS} DupStudentsInBSViaGrades.")
     try:
-        result = utils.FindDupStudentsInBSViaAttendanceGrades(GRADES_DIR, COLUMN_NAME)
+        result = utils.FindDupStudentsInBSViaAttendanceGrades(
+            GRADES_DIR,
+            COLUMN_NAME,
+            send_notification=False,
+        )
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: FindDupStudentsInBSViaAttendanceGrades crashed for {GRADES_DIR}: {exc}")
         return False
 
     if result:
         print(f"Exiting {CAMPUS} DupStudentsInBSViaGrades.")
+        return True
     else:
         print(f"WARNING: Exiting {CAMPUS} DupStudentsInBSViaGrades.")
-    return result
+        return True
 
 
 if __name__ == "__main__":
