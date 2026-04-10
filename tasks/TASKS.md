@@ -16,8 +16,8 @@
 ## Current Position
 
 **Status:** Active.
-**Last session:** 2026-04-10 — compared Claude and Codex session handling, then upgraded Codex to use explicit `start session` / `end session` conventions with archive support.
-**Next step:** Use the new session routine consistently at workspace and project level, then apply the template to the next new project.
+**Last session:** 2026-04-10 — copied the newer VAU live-review design into the MAE project, verified the new MAE live packet builder, and pushed the MAE changes to GitHub.
+**Next step:** On the next MAE data refresh, use the new live packet workflow in a real session and refine only if real-use friction appears.
 
 ## Open Items
 
@@ -25,6 +25,17 @@
 - Decide whether Codex needs a separate workspace memory pattern or should stay file-based only.
 
 ## Session Log
+
+### Session 3 — 2026-04-10
+
+**Focus:** Cross-project design transfer from VAU to MAE.
+
+- Read both projects' instruction and task files to compare the newer VAU live-review workflow against the older MAE brief-first prototype.
+- Ported the VAU-style live packet, archived-source context, payload-driven renderer, and supporting workflow instructions into `codex_som_mae_financials`.
+- Verified the new MAE flow by running `python scripts/build_live_session_packet.py` successfully against the current MAE files.
+- Committed and pushed the MAE design-port work to GitHub as `658430e`.
+
+**Next:** Use the new MAE live workflow on the next real data drop, then decide whether any other older project conventions still need harmonizing.
 
 ### Session 1 — 2026-04-09
 

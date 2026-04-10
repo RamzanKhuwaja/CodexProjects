@@ -13,9 +13,9 @@
 
 ## Current Position
 
-**Status:** Active — FY2025-26 in progress. All 4 reports generated as of April 2, 2026. MAE live Codex workflow is being aligned to the newer VAU design so live packet review can replace the older brief-first-only prototype.
-**Last session:** Apr 10, 2026 — MAE brief-first prototype added for Codex: extraction now supports one-short-brief-at-a-time review before final report generation.
-**Next step:** Verify the new MAE live packet flow against the current project files, then use `python scripts/build_live_session_packet.py` on the next QuickBooks or tax-doc drop before rendering final reports.
+**Status:** Active — FY2025-26 in progress. MAE now has the newer live Codex workflow aligned from VAU, and the live packet builder has been verified successfully against the current MAE files.
+**Last session:** Apr 10, 2026 — ported the VAU live-review design into MAE, generated and verified `data/extracted/live_session_packet.json`, and pushed the MAE workflow changes to GitHub.
+**Next step:** On the next QuickBooks or tax-doc drop, run `python scripts/build_live_session_packet.py`, review the 4 briefs live, then render final reports with `python scripts/render_live_reports.py data/extracted/live_report_payload.json`.
 
 ---
 
@@ -30,6 +30,20 @@
 ---
 
 ## Session Log
+
+### Session 5 — 2026-04-10
+
+**Focus:** Replace the MAE brief-first prototype with the newer VAU-style live Codex workflow.
+
+**Changes made:**
+
+- Added `scripts/project_context.py` so archived MAE reviewed statements and the FY2024-25 T2 drive repeatable historical values instead of hardcoded script constants.
+- Added `scripts/live_workflow.py`, `scripts/build_live_session_packet.py`, and `scripts/render_live_reports.py` to support evidence-first live review and payload-driven report rendering.
+- Added `tasks/run_live_mae_cycle.md` and updated `AGENTS.md`, `CHEATSHEET.txt`, `CLAUDE.md`, `tasks/DECISIONS.md`, `tasks/TASKS.md`, and `memory/PROJECT_MEMORY.md` so the live Codex workflow is now the default MAE path.
+- Verified the new MAE flow by running `python scripts/build_live_session_packet.py` successfully against the current MAE files.
+- Committed and pushed the workflow changes to GitHub.
+
+**Next:** Use the MAE live workflow on the next real data refresh, then render final reports only after the live brief review is approved.
 
 ### Session 4 — 2026-04-10
 
