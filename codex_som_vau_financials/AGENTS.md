@@ -19,6 +19,8 @@ When Ramzan says `end session`, update:
 - `tasks/DECISIONS.md` if needed
 - `memory/PROJECT_MEMORY.md` if stable facts changed
 - `tasks/ARCHIVE.md` if more than 5 recent sessions are kept
+- commit the relevant session changes to git
+- push them to GitHub unless Ramzan says not to push
 
 ## Live Codex Workflow
 

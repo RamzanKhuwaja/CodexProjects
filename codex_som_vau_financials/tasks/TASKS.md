@@ -13,9 +13,9 @@
 
 ## Current Position
 
-**Status:** Active — FY2025-26 in progress. VAU live Codex workflow rebuilt on April 10, 2026 for evidence-first review plus redesigned final reports.
-**Last session:** Apr 10, 2026 — built VAU-only live workflow: Python now prepares neutral evidence and cached source text, Codex does reasoning live in chat, and redesigned reports render from an approved payload.
-**Next step:** On next QuickBooks or tax-doc drop, run `python scripts/build_live_session_packet.py`, review the 4 briefs live, then render final reports with `python scripts/render_live_reports.py data/extracted/live_report_payload.json`.
+**Status:** Active — FY2025-26 in progress. VAU live Codex workflow is active, final live reports were rendered on April 10, 2026, and the scripts/instructions were cleaned to remove unsupported payment-status assumptions and other hardcoded session-specific values.
+**Last session:** Apr 10, 2026 — refactored the VAU scripts and project instructions to rely on QuickBooks plus archived source documents instead of hardcoded figures, completed the 4-topic live review, rendered the approved live reports, and moved the project under the new `CodexProjects` monorepo GitHub repo.
+**Next step:** On the next QuickBooks or tax-doc drop, run `python scripts/build_live_session_packet.py`, review the 4 briefs live, then render final reports with `python scripts/render_live_reports.py data/extracted/live_report_payload.json`. Separately, confirm actual FY2025-26 tax installment history from CRA, accountant records, or a QuickBooks source that explicitly shows payments.
 
 ---
 
@@ -36,6 +36,20 @@
 
 ### Session 5 — 2026-04-10
 
+**Focus:** Remove hardcoded assumptions, complete the live VAU review, render final live reports, and move the project into the new monorepo GitHub repo.
+
+**Changes made:**
+
+- Added `scripts/project_context.py` so archived reviewed statements and the T2 drive historical tax/reference values instead of repeated literals.
+- Refactored `scripts/extract_data.py`, `scripts/live_workflow.py`, and `scripts/generate_tax_report.py` to stop inventing installment status and to derive figures from QuickBooks plus archived source files.
+- Cleaned project instructions and task files so `end session` now includes commit and push, and so support files no longer treat unsupported assumptions as truth.
+- Ran the live VAU session end to end, approved all 4 briefs, wrote `data/extracted/live_report_payload.json`, and rendered the final live `.docx` reports dated April 10, 2026.
+- Added the new `CodexProjects` root git repo, committed the monorepo, and pushed it to GitHub.
+
+**Next:** Use the same live workflow on the next data drop, and confirm actual FY2025-26 installment payments from an explicit payment source before stating remaining tax balance.
+
+### Session 4 — 2026-04-10
+
 **Focus:** Replace script-led report logic with a VAU-only live Codex workflow.
 
 **Changes made:**
@@ -48,7 +62,7 @@
 
 **Next:** Use the live packet on the next real monthly update, brief one topic at a time in chat, then create the approved payload and final reports.
 
-### Session 4 — 2026-04-09
+### Session 3 — 2026-04-09
 
 **Focus:** VAU redesign prototype for deeper LLM-led analysis before report generation.
 
@@ -60,7 +74,7 @@
 
 **Next:** Use the prototype on the next VAU data refresh and refine brief quality before redesigning final report generation.
 
-### Session 3 — 2026-04-07
+### Session 2 — 2026-04-07
 
 **Focus:** Token optimization — CLAUDE.md slimmed, `docs/constants.md` created, Lean Report Run Protocol added.
 
@@ -73,7 +87,7 @@
 
 **Result:** Next report run session estimated at ~6,000 tokens vs ~60,000 previously (~90% reduction).
 
-### Session 2 — 2026-04-07
+### Session 1 — 2026-04-07
 
 **Focus:** Pipeline upgrade applied from MAE — all 6 scripts updated to handle CSV exports (QuickBooks now exports CSVs with prefix "Spirit of Math Schools Vaughan_"). All 4 report scripts fully rewritten to be dynamic (read from run_data.json, no hardcoded dates/amounts). Regenerated all 4 reports with April 3 data. All 15 validation checks pass.
 
@@ -92,9 +106,3 @@
 - Automobile costs (6300) +137% vs PY — CRA logbook required
 
 **Next:** Run again when next QuickBooks export arrives.
-
-### Session 1 — 2026-03-12
-
-**Focus:** Full report run — all 4 reports regenerated. Shareholder sign convention corrected (Ramzan owes corp ~$141K; Farah owes corp ~$3,905).
-**Key findings:** Marketing on track but tight ($46,297 vs $42,720 required YTD); projected full-year taxable income ~$290K; Service Fee $63,726 is a new unresolved account; Student Handouts +169% vs PY.
-**Next:** Run again when next QuickBooks export arrives. Resolve Service Fee account.

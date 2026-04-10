@@ -14,7 +14,7 @@ Project session:
 
 Close any session:
   Say: end session
-  Update TASKS.md, DECISIONS.md if needed, and ARCHIVE.md when more than 5 sessions are kept
+  Update TASKS.md, DECISIONS.md if needed, ARCHIVE.md when more than 5 sessions are kept, then commit and push the session changes to GitHub
 
 WORKSPACE SESSION STATE
 -----------------------

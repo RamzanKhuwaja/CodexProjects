@@ -84,7 +84,9 @@ When Ramzan says `end session`:
 3. Update the relevant `tasks/DECISIONS.md` if any permanent decisions were made.
 4. Move session entries older than the last 5 from `TASKS.md` to `ARCHIVE.md` if that file exists for that scope.
 5. Update memory files if any new stable facts were learned.
-6. Summarize the recorded state so the next `start session` can resume cleanly.
+6. Commit the relevant files for that session to git with a focused commit.
+7. Push the commit to GitHub unless Ramzan says not to push.
+8. Summarize the recorded state so the next `start session` can resume cleanly.
 
 ---
 

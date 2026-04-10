@@ -3,7 +3,7 @@ som_vau_financials — Quick Reference
 
 SESSION
   /orient          Start a session (reads TASKS.md + DECISIONS.md)
-  /close-session   End a session (updates TASKS.md, commits)
+  /close-session   End a session (updates session files, commits, pushes)
 
 RUN REPORTS (from som_vau_financials/ folder)
   python scripts/build_live_session_packet.py     New default: build live evidence packet for Codex review

@@ -22,6 +22,7 @@
 - **Lean Report Run Protocol:** When user drops new QB files → run `python scripts/run_all_reports.py` → read `reports/validation_summary_<date>.txt` → summarize. Do NOT read scripts or data files unless a check fails.
 - **Codex default workflow:** For new VAU sessions, use the live Codex pipeline before generating final reports.
 - **Payment-status rule:** Do not state that tax installments were paid, unpaid, upcoming, or overdue unless a provided project source explicitly shows that status.
+- **Source-of-truth rule:** Current-year figures must come from the current QuickBooks files and provided supporting documents. Historical tax and financial reference figures should be derived from the archived reviewed statements and T2 files, not hardcoded into scripts.
 
 ## Business Rules
 
