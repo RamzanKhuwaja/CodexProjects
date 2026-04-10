@@ -13,9 +13,9 @@
 
 ## Current Position
 
-**Status:** Active — FY2025-26 in progress. All 4 reports generated as of April 2, 2026. MAE brief-first prototype now added for Codex.
+**Status:** Active — FY2025-26 in progress. All 4 reports generated as of April 2, 2026. MAE live Codex workflow is being aligned to the newer VAU design so live packet review can replace the older brief-first-only prototype.
 **Last session:** Apr 10, 2026 — MAE brief-first prototype added for Codex: extraction now supports one-short-brief-at-a-time review before final report generation.
-**Next step:** On next QuickBooks drop, run the new brief-first flow before generating final reports.
+**Next step:** Verify the new MAE live packet flow against the current project files, then use `python scripts/build_live_session_packet.py` on the next QuickBooks or tax-doc drop before rendering final reports.
 
 ---
 

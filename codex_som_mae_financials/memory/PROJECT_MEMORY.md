@@ -19,10 +19,13 @@
 - Normal full refresh path is `python scripts/run_all_reports.py`.
 - Validation summary lives in `reports/validation_summary_<date>.txt`.
 - Use the lean run protocol from `CLAUDE.md` unless a validation check fails.
-- New Codex prototype path is `python scripts/run_briefing_cycle.py` first, then one short on-screen brief at a time, then final reports only after approval.
+- New Codex default path is `python scripts/build_live_session_packet.py`, then one short on-screen brief at a time in chat, then final reports only after approval with `python scripts/render_live_reports.py data/extracted/live_report_payload.json`.
+- The live Codex path may use extra tax or finance documents dropped into `data/current/`, `data/archive/`, or `docs/`.
+- Python should stay limited to extraction, normalization, and rendering. Final conclusions should be made live in the Codex session.
 
 ## Known Recurring Flags
 
 - FTC charges are zero this year and should stay flagged in marketing review until resolved.
 - Student Handouts increase should stay flagged in deviation review.
 - Class 13-a CCA expiry materially affects tax review.
+- Do not state installment payment status unless a provided source file explicitly proves it.

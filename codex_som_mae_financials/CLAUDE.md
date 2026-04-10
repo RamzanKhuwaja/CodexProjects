@@ -68,7 +68,7 @@ Financial constants (audited figures, CCA, 3-year benchmarks, installment schedu
 
 ## Session Management
 
-Use `/orient` at the start of every session and `/close-session` at the end.
+Use `start session` at the start of every session and `end session` at the end.
 
 | File | Purpose |
 | --- | --- |
@@ -138,6 +138,24 @@ Code snippets for reading these files: see `docs/constants.md`.
 
 ## How to Run
 
+### Live Codex Cycle — preferred when the user wants live reasoning before final reports
+
+1. Run: `python scripts/build_live_session_packet.py`
+2. Read:
+   - `data/extracted/live_session_packet.json`
+   - any relevant cached text under `data/extracted/source_text/`
+3. Present one short brief at a time in this order:
+   - marketing
+   - tax
+   - deviation
+   - shareholder
+4. Wait for Ramzan's reply after each brief.
+5. After approval, create `data/extracted/live_report_payload.json` using `data/extracted/live_report_payload.template.json` as the starting shape.
+6. Run: `python scripts/render_live_reports.py data/extracted/live_report_payload.json`
+
+Use extra source documents if they were added to `data/current/`, `data/archive/`, or `docs/`.
+Python should handle extraction and rendering only. Final judgment belongs in the live Codex session.
+
 ### Lean Report Run Protocol — use this when the user drops new QuickBooks files
 
 **When the user says "Regenerate all reports" or drops new QB exports:**
@@ -153,6 +171,8 @@ fails. If a check fails: read only the failing script, fix it, re-run the pipeli
 ### Individual scripts (only when running a single task or debugging)
 
 ```bash
+python scripts/build_live_session_packet.py   # Build live evidence packet + payload template
+python scripts/render_live_reports.py         # Render redesigned reports from approved payload
 python scripts/extract_data.py                # Read QuickBooks files → data/extracted/run_data.json
 python scripts/generate_marketing_report.py   # Task #1
 python scripts/generate_tax_report.py         # Task #2
@@ -183,6 +203,7 @@ Report naming: `reports/claude_report_<topic>_mae_YYYY-MM-DD.docx`
 - **FTC charges (6201.1) = $0 this year** — was $24,058/year historically. Flag in marketing report. Confirm with head office if still expected.
 - **Student Handouts +108% vs PY** — flag in every deviation report (CRA risk).
 - **Class 13-a CCA expired Jul 31, 2025** — ~$79,000 less in tax deductions this year. Flag in tax report.
+- **Tax installment status:** Do NOT state paid/unpaid/upcoming/overdue status unless a provided project source explicitly shows it.
 
 ---
 
