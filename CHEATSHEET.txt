@@ -1,0 +1,61 @@
+===============================================================================
+  CodexProjects — Workspace Cheatsheet
+===============================================================================
+
+EVERY SESSION
+-------------
+Workspace session:
+  Say: start session
+  Read memory/MEMORY.md + relevant memory/*.md + tasks/TASKS.md + tasks/DECISIONS.md
+
+Project session:
+  Say: start session
+  Read <project>/AGENTS.md + <project>/memory/PROJECT_MEMORY.md + <project>/tasks/TASKS.md + <project>/tasks/DECISIONS.md
+
+Close any session:
+  Say: end session
+  Update TASKS.md, DECISIONS.md if needed, and ARCHIVE.md when more than 5 sessions are kept
+
+WORKSPACE SESSION STATE
+-----------------------
+tasks/TASKS.md                <- Workspace-level session log and open items
+tasks/DECISIONS.md            <- Permanent workspace-level decisions
+tasks/ARCHIVE.md              <- Older workspace session history
+
+MEMORY
+------
+memory/MEMORY.md              <- Workspace memory index
+memory/*.md                   <- Stable workspace facts and user preferences
+
+Project memory:
+  <project>/memory/PROJECT_MEMORY.md
+
+PROJECTS
+--------
+Folder                    Description
+----------------------    -----------------------------------------------------
+_project_template/        Copy this to start a new project
+codex_som_mae_financials/ Spirit of Math Markham East financial analysis
+codex_som_vau_financials/ Spirit of Math Vaughan financial analysis
+
+STARTING A NEW PROJECT
+----------------------
+1. Copy _project_template/ to a new folder
+2. Update the new project's AGENTS.md
+3. Update the new project's CHEATSHEET.txt
+4. Add the project to this cheatsheet and to the root AGENTS.md project list
+5. Seed the new project's memory/PROJECT_MEMORY.md
+
+GIT RULES (QUICK)
+-----------------
+- One project per commit
+- Always commit: docs/, data/, scripts/, Office files, PDFs
+- Never commit: output/ non-Office generated files unless explicitly requested
+
+ENVIRONMENT
+-----------
+- Workspace root: C:\Users\ramza\My Software Projects\CodexProjects
+- Shell: PowerShell
+- Run scripts from project root: python scripts/<script>.py
+
+===============================================================================

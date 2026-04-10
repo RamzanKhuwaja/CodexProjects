@@ -1,0 +1,12 @@
+# Derived extraction artifacts — regenerated each run
+data/extracted/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Office temp files (NOT the real Office files — those are always committed)
+~$*.docx
+~$*.xlsx
+~$*.pptx

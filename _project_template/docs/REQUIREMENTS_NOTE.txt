@@ -1,0 +1,5 @@
+Create the real Word requirements file here as:
+
+docs/Requirements.docx
+
+This text file is only a placeholder so the template stays valid in git.

@@ -1,0 +1,61 @@
+============================================================
+  [PROJECT NAME] — Quick Reference Cheatsheet
+============================================================
+
+PROJECT
+  [One-line description of the project]
+
+MEMORY
+  memory/PROJECT_MEMORY.md    Stable project facts and preferences
+  tasks/TASKS.md             Current state
+  tasks/DECISIONS.md         Locked decisions
+  tasks/ARCHIVE.md           Older session history
+
+SESSION PHRASES
+  "start session"            Reload project memory and resume from last recorded state
+  "end session"              Record the session, decisions, and next step
+
+------------------------------------------------------------
+SCRIPTS
+------------------------------------------------------------
+
+  [Script name and what it does]:
+    python scripts/[script_name].py [--flags]
+
+  Output: [output folder and filename pattern]
+
+------------------------------------------------------------
+DATA FILES (data/current/)
+------------------------------------------------------------
+
+  [List key input files here]
+
+------------------------------------------------------------
+OUTPUT
+------------------------------------------------------------
+
+  [Describe output files and naming convention]
+
+------------------------------------------------------------
+KEY NUMBERS / REFERENCE VALUES
+------------------------------------------------------------
+
+  [List important constants, thresholds, or reference figures]
+
+------------------------------------------------------------
+TRIGGER PHRASES
+------------------------------------------------------------
+
+  "start session"      - Reload project context from memory and task files
+  "end session"        - Save the project session state for the next visit
+  "Perform task #1"   - [describe what this does]
+  "Perform task #2"   - [describe what this does]
+
+------------------------------------------------------------
+NOTES
+------------------------------------------------------------
+
+  - Run all scripts from the project root folder
+  - [Add gotchas, warnings, or environment notes here]
+
+============================================================

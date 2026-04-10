@@ -1,0 +1,77 @@
+som_vau_financials — Quick Reference
+=====================================
+
+SESSION
+  /orient          Start a session (reads TASKS.md + DECISIONS.md)
+  /close-session   End a session (updates TASKS.md, commits)
+
+RUN REPORTS (from som_vau_financials/ folder)
+  python scripts/build_live_session_packet.py     New default: build live evidence packet for Codex review
+  python scripts/render_live_reports.py <path>    Render redesigned reports from approved live payload
+  python scripts/run_briefing_cycle.py          New prototype: extract + briefing packets only
+  python scripts/run_all_reports.py               Full pipeline (all 4 reports + validate)
+  python scripts/extract_data.py                  Refresh run_data.json only
+  python scripts/build_briefing_packets.py        Build 4 short VAU briefing packets
+  python scripts/generate_marketing_report.py     Task #1
+  python scripts/generate_tax_report.py           Task #2
+  python scripts/generate_deviation_report.py     Task #3
+  python scripts/generate_shareholder_report.py   Task #4
+  python scripts/validate_all.py                  Validate all 4 latest reports
+
+TRIGGER PHRASES
+  "Start VAU live analysis using the updated files"  → Codex runs build_live_session_packet.py, reads the evidence, then briefs one topic at a time
+  "Render the approved live VAU reports"            → Codex writes live_report_payload.json and runs render_live_reports.py
+  "Start VAU brief cycle"     → runs run_briefing_cycle.py
+  "Regenerate all reports"     → runs run_all_reports.py
+  "Perform task #1"            → marketing analysis
+  "Perform task #2"            → tax estimation
+  "Perform task #3"            → deviation / CRA risk
+  "Perform task #4"            → shareholder advances
+  "I updated the background doc" → triggers Background Doc Sync Protocol
+
+LIVE VAU FLOW
+  1. You say: "Start VAU live analysis using the updated files"
+  2. Codex runs: python scripts/build_live_session_packet.py
+  3. Codex reads:
+     - data/extracted/live_session_packet.json
+     - relevant files under data/extracted/source_text/
+  4. Codex presents short briefs in this order:
+     - marketing
+     - tax
+     - deviation
+     - shareholder
+  5. After your approval, Codex fills:
+     - data/extracted/live_report_payload.json
+     using:
+     - data/extracted/live_report_payload.template.json
+  6. Codex runs:
+     - python scripts/render_live_reports.py data/extracted/live_report_payload.json
+
+DATA FILES (drop in data/current/)
+  Profit and Loss - Compare YTD for 3 years.xlsx
+  Profit and Loss - Aug 2022 to July 2025.xlsx
+  Shareholder advances - this fiscal year.xlsx
+  Shareholder Advances - all dates.xlsx
+  Plus any extra supporting docs you want considered, such as tax papers or reviewed statements
+
+OUTPUT
+  data/extracted/live_session_packet.json
+  data/extracted/live_report_payload.template.json
+  data/extracted/live_report_payload.json
+  reports/codex_live_report_<topic>_vau_YYYY-MM-DD.docx
+  data/extracted/briefing_packets.json
+  reports/claude_report_<topic>_vau_YYYY-MM-DD.docx
+
+KEY CONSTANTS
+  Royalty: 22% of gross revenue
+  Marketing obligation: 3% of gross revenue
+  Fiscal year: Aug 1 – Jul 31 (year 16 in FY2025-26)
+  SBD limit: $300,000
+
+KEY FILES
+  scripts/live_workflow.py      Live-session extraction and report rendering helpers
+  tasks/run_live_vau_cycle.md   Repeatable monthly live workflow
+  scripts/report_helpers.py   Shared styling helpers (do not modify without testing all 4)
+  scripts/extract_data.py     Reads QB files → data/extracted/run_data.json
+  tasks/TASKS.md              Current session state
+  tasks/DECISIONS.md          Permanent decisions

@@ -1,0 +1,29 @@
+=== validate_all.py — som_mae_financials ===
+Data: data/extracted/run_data.json (extracted: 2026-03-11T22:23:51.787592)
+
+Task 1 — Marketing: reports/claude_report_marketing_mae_2026-03-11.docx
+  PASS  YTD tuition current: $2,180,365.00 (expected $2,180,364.61)
+  PASS  YTD marketing total: $61,328.00 (expected $61,327.81)
+  WARN  Gap conservative: not found in document — may be display-formatted differently (expected $4,083.13)
+  WARN  Projected full-year revenue: not found in document — may be display-formatted differently (expected $3,387,351.67)
+
+Task 2 — Tax: reports/claude_report_tax_mae_2026-03-11.docx
+  PASS  QB Profit (net income): $384,826.22 (expected $384,826.22)
+  WARN  H1 pre-tax proxy: not found in document — may be display-formatted differently (expected $412,912.52)
+  PASS  Installment Apr 30 / Jul 31 amount: '$13,565' found in document
+  PASS  Total installments: '$42,226' found in document
+
+Task 3 — Deviation: reports/claude_report_deviation_mae_2026-03-11.docx
+  PASS  Tuition CY: $2,180,365.00 (expected $2,180,364.61)
+  PASS  Student Handouts CY: $134,940.00 (expected $134,939.74)
+  PASS  Insurance CY: $18,879.00 (expected $18,879.22)
+  PASS  Marketing total CY: $61,328.00 (expected $61,327.81)
+
+Task 4 — Shareholder: reports/claude_report_shareholder_mae_2026-03-11.docx
+  WARN  Ramzan closing balance: not found in document — may be display-formatted differently (expected $-8,798.69)
+  PASS  Rezai in document: 'Rezai' found in document
+  PASS  Rezai closing balance (zero/nil): '$0 / nil' found in document
+  PASS  JE-11 amount: '3,263 / 3,264' found in document
+  PASS  Hajj advance amount: '$10,000' found in document
+
+=== RESULT: ALL 13 CHECKS PASSED (4 WARNING(S)) ===
