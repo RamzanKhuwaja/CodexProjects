@@ -187,7 +187,19 @@ All scripts must be run from the `som_mae_financials/` project folder.
 
 ## Report Format Standard ("Easy Read")
 
-All 4 reports follow this structure (enforced by `scripts/report_helpers.py`):
+All 4 reports should answer the main question first in simple English.
+
+For live Codex reports, put these at the top in this order:
+
+1. **Main Question**
+2. **Direct Answer**
+3. **Best Estimate**
+4. **Key Numbers**
+5. Short supporting detail after that
+
+The older bulk reports follow the prior "easy read" structure. That fallback format is still supported, but the live Codex path should lead with the answer first.
+
+Bulk reports follow this structure (enforced by `scripts/report_helpers.py`):
 
 1. **Quick Summary** — blue callout (4–6 bullets) + red callout (1–3 urgent actions) + note pointing forward
 2. **Numbered sections** with plain-English explanations
@@ -196,7 +208,10 @@ All 4 reports follow this structure (enforced by `scripts/report_helpers.py`):
 5. **Bottom Line** section (last) — numbered list, each item has **bold title** + plain-English body
 6. **Disclaimer note** at the very end
 
-Report naming: `reports/claude_report_<topic>_mae_YYYY-MM-DD.docx`
+Report naming:
+
+- Live workflow: `reports/codex_live_report_<topic>_mae_YYYY-MM-DD.docx`
+- Bulk fallback workflow: `reports/claude_report_<topic>_mae_YYYY-MM-DD.docx`
 
 **IMPORTANT — Known account flags (as of Apr 2026):**
 
@@ -209,7 +224,7 @@ Report naming: `reports/claude_report_<topic>_mae_YYYY-MM-DD.docx`
 
 ## Reports
 
-Past reports (last 4 — older entries in `tasks/ARCHIVE.md`):
+Past reports from the older bulk pipeline (last 4 — older entries in `tasks/ARCHIVE.md`):
 
 - `reports/claude_report_marketing_mae_2026-04-02.docx` — Task #1, Apr 2, 2026 (tuition $3,176,493; marketing $72,384; gap $22,911–$29,778)
 - `reports/claude_report_tax_mae_2026-04-02.docx` — Task #2, Apr 2, 2026 (H1 pre-tax $1,226,848; Apr 30 installment $13,565 URGENT)

@@ -8,10 +8,8 @@ SESSION
 RUN REPORTS (from codex_som_mae_financials/ folder)
   python scripts/build_live_session_packet.py   New default: build live evidence packet for Codex review
   python scripts/render_live_reports.py <path>  Render redesigned reports from approved live payload
-  python scripts/run_briefing_cycle.py          Legacy prototype: extract + briefing packets only
   python scripts/run_all_reports.py             Full pipeline (all 4 reports + validate)
   python scripts/extract_data.py                Refresh run_data.json only
-  python scripts/build_briefing_packets.py      Build 4 short MAE briefing packets
   python scripts/generate_marketing_report.py   Task #1
   python scripts/generate_tax_report.py         Task #2
   python scripts/generate_deviation_report.py   Task #3
@@ -21,7 +19,6 @@ RUN REPORTS (from codex_som_mae_financials/ folder)
 TRIGGER PHRASES
   "Start MAE live analysis using the updated files"  -> Codex runs build_live_session_packet.py, reads the evidence, then briefs one topic at a time
   "Render the approved live MAE reports"             -> Codex writes live_report_payload.json and runs render_live_reports.py
-  "Start MAE brief cycle"       -> runs run_briefing_cycle.py
   "Regenerate all reports"      -> runs run_all_reports.py
   "Perform task #1"             -> marketing analysis
   "Perform task #2"             -> tax estimation
@@ -58,9 +55,8 @@ OUTPUT
   data/extracted/live_session_packet.json
   data/extracted/live_report_payload.template.json
   data/extracted/live_report_payload.json
-  reports/codex_live_report_<topic>_mae_YYYY-MM-DD.docx
-  data/extracted/briefing_packets.json
-  reports/claude_report_<topic>_mae_YYYY-MM-DD.docx
+  reports/codex_live_report_<topic>_mae_YYYY-MM-DD.docx   Live review output
+  reports/claude_report_<topic>_mae_YYYY-MM-DD.docx       Bulk run_all_reports output
 
 KEY CONSTANTS
   Royalty: 12% of gross revenue

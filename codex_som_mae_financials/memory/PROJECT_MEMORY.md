@@ -13,6 +13,7 @@
 - Main project instructions live in `CLAUDE.md`.
 - Current constants live in `docs/constants.md`.
 - Session continuity lives in `tasks/TASKS.md` and `tasks/DECISIONS.md`.
+- Reports should answer the main question first in plain language, with a direct estimate up front and supporting detail after.
 
 ## Workflow Pattern
 
@@ -20,6 +21,7 @@
 - Validation summary lives in `reports/validation_summary_<date>.txt`.
 - Use the lean run protocol from `CLAUDE.md` unless a validation check fails.
 - New Codex default path is `python scripts/build_live_session_packet.py`, then one short on-screen brief at a time in chat, then final reports only after approval with `python scripts/render_live_reports.py data/extracted/live_report_payload.json`.
+- The older brief-first prototype has been retired and should not be referenced in active instructions.
 - The live Codex path may use extra tax or finance documents dropped into `data/current/`, `data/archive/`, or `docs/`.
 - Python should stay limited to extraction, normalization, and rendering. Final conclusions should be made live in the Codex session.
 

@@ -13,9 +13,9 @@
 
 ## Current Position
 
-**Status:** Active — FY2025-26 in progress. MAE now has the newer live Codex workflow aligned from VAU, and the live packet builder has been verified successfully against the current MAE files.
-**Last session:** Apr 10, 2026 — ported the VAU live-review design into MAE, generated and verified `data/extracted/live_session_packet.json`, and pushed the MAE workflow changes to GitHub.
-**Next step:** On the next QuickBooks or tax-doc drop, run `python scripts/build_live_session_packet.py`, review the 4 briefs live, then render final reports with `python scripts/render_live_reports.py data/extracted/live_report_payload.json`.
+**Status:** Closed cleanly for Apr 11, 2026. The MAE live workflow now generates answer-first reports, the retired prototype path has been removed from active support files, and the session changes are ready to resume from the new direct-answer format.
+**Last session:** Apr 11, 2026 — cleaned the repo for the new workflow, changed live reports to answer the main question first with a direct estimate, regenerated the four `codex_live_report_*` reports, and recorded the new end-session git-add check.
+**Next step:** On the next QuickBooks or tax-doc drop, run `python scripts/build_live_session_packet.py`, use the live answer-first format to generate `data/extracted/live_report_payload.json`, render final reports with `python scripts/render_live_reports.py data/extracted/live_report_payload.json`, and collect support for JE-11, JE-12, Hajj, and the installment catch-up.
 
 ---
 
@@ -24,12 +24,31 @@
 - **JE-12 documentation needed** — Annual credits ($3,500 + $4,950 + $1,070.37 = $9,520.37) posted for both shareholders. Ask bookkeeper/Tang & Partners: what are these three entries for?
 - **JE-11 documentation needed** — Written agreement between Ramzan and Rezai confirming Rezai waived his credit to offset Ramzan's debt.
 - **Hajj advance verification** — Confirm $10,000 (Jan 13, 2026) is in account 2901 only, NOT in any expense account.
-- **Apr 30, 2026 installment URGENT** — $13,565 due April 30, 2026.
+- **FY2025-26 installments not paid** — Owner stated on Apr 11, 2026 that no FY2025-26 installments were made. Catch-up and CRA exposure need review for Oct 31, 2025 $1,530; Jan 31, 2026 $13,565; Apr 30, 2026 $13,565; Jul 31, 2026 $13,566.
 - **Marketing gap** — $72,384 spent vs ~$95,295–$102,162 obligation. Gap of ~$22,911–$29,778 remaining before Jul 31.
 
 ---
 
 ## Session Log
+
+### Session 6 — 2026-04-11
+
+**Focus:** Run the live MAE workflow end-to-end on current files, simplify the report style to direct answers first, and clean the project to remove the retired prototype path.
+
+**Changes made:**
+
+- Ran `python scripts/build_live_session_packet.py`, reviewed the four live briefs in chat, and captured current conclusions from the evidence packet.
+- Recorded live owner input that no FY2025-26 installment payments have been made and carried that into the tax output.
+- Wrote `data/extracted/live_report_payload.json` and rendered:
+  - `reports/codex_live_report_marketing_mae_2026-04-11.docx`
+  - `reports/codex_live_report_tax_mae_2026-04-11.docx`
+  - `reports/codex_live_report_deviation_mae_2026-04-11.docx`
+  - `reports/codex_live_report_shareholder_mae_2026-04-11.docx`
+- Updated the live report renderer and payload shape so reports now start with the main question, direct answer, and best estimate in simple language.
+- Cleaned `AGENTS.md`, `CHEATSHEET.txt`, `memory/PROJECT_MEMORY.md`, `tasks/DECISIONS.md`, and the repo support files so the retired brief-first prototype is no longer part of the active MAE instructions.
+- Updated the project `end session` instructions so Codex must check `git status` and add any relevant new files before committing and pushing.
+
+**Next:** Use the same live workflow on the next data refresh, keep the answer-first report style, and collect missing support for installments, JE-11, JE-12, and the $10,000 Hajj item.
 
 ### Session 5 — 2026-04-10
 
@@ -83,10 +102,4 @@
 - Ramzan: +$721.68 (corp owes Ramzan — JE-12 posted); Rezai: +$9,520.37 (corp owes Rezai)
 - Student Handouts +108% vs PY (CRA risk flag); Insurance +71% vs PY
 **Changes made:** `extract_data.py`, `run_all_reports.py` — CSV/glob support; all 4 report scripts — fully dynamic (no hardcoding).
-**Next:** Run again when next QuickBooks export arrives.
-
-### Session 1 — 2026-03-11
-
-**Focus:** Full report run — all 4 reports regenerated with updated QuickBooks YTD data.
-**Key findings:** Marketing spend $61,328 YTD (gap $34,700–$40,300 remaining); projected revenue ~$3.39M; Apr 30 tax installment $13,565 URGENT; Ramzan shareholder advance improved to −$8,799; JE-11 documentation still required.
 **Next:** Run again when next QuickBooks export arrives.

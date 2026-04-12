@@ -589,12 +589,14 @@ def build_payload_template(packet):
         template["reports"][topic] = {
             "topic": topic,
             "title": "",
+            "main_question": "",
+            "direct_answer": "",
+            "best_estimate": "",
             "main_answer": "",
             "numbers_to_know": [],
             "watch_items": [],
             "sections": [
-                {"heading": "What I See", "points": []},
-                {"heading": "What This Means for You", "points": []},
+                {"heading": "Why I Am Saying This", "points": []},
                 {"heading": "What To Do Next", "points": []},
             ],
             "questions_to_confirm": [],
@@ -679,11 +681,19 @@ def render_single_report(output_path: Path, payload, meta):
     subtitle.font.color.rgb = RGBColor(0x5C, 0x5C, 0x5C)
     p.paragraph_format.space_after = Pt(8)
 
-    add_callout(doc, "Main Answer", payload["main_answer"], "E8F0FE", RGBColor(0x1F, 0x38, 0x96))
+    if payload.get("main_question"):
+        add_callout(doc, "Main Question", payload["main_question"], "F4F4F4", RGBColor(0x2E, 0x2E, 0x2E))
+
+    answer_text = payload.get("direct_answer") or payload.get("main_answer", "")
+    if answer_text:
+        add_callout(doc, "Direct Answer", answer_text, "E8F0FE", RGBColor(0x1F, 0x38, 0x96))
+
+    if payload.get("best_estimate"):
+        add_callout(doc, "Best Estimate", payload["best_estimate"], "EAF4EA", RGBColor(0x1A, 0x5C, 0x1A))
 
     if payload.get("numbers_to_know"):
         p = doc.add_paragraph()
-        run = p.add_run("Numbers To Know")
+        run = p.add_run("Key Numbers")
         run.bold = True
         run.font.name = "Calibri"
         run.font.size = Pt(12.5)
@@ -700,13 +710,7 @@ def render_single_report(output_path: Path, payload, meta):
             add_cell_text(table.rows[idx].cells[1], row.get("value", ""))
 
     if payload.get("watch_items"):
-        add_callout(
-            doc,
-            "Watch",
-            " | ".join(payload["watch_items"]),
-            "FDECEA",
-            RGBColor(0x8B, 0x00, 0x00),
-        )
+        add_callout(doc, "Keep In Mind", " | ".join(payload["watch_items"]), "FDECEA", RGBColor(0x8B, 0x00, 0x00))
 
     for section in payload.get("sections", []):
         p = doc.add_paragraph()
@@ -740,9 +744,7 @@ def render_single_report(output_path: Path, payload, meta):
     add_callout(doc, "Bottom Line", payload["bottom_line"], "EAF4EA", RGBColor(0x1A, 0x5C, 0x1A))
 
     p = doc.add_paragraph()
-    note = p.add_run(
-        "Prepared in a live Codex session. Python handled extraction and formatting; the report judgment was made during the chat review."
-    )
+    note = p.add_run("Prepared by Codex from the current project files. Python handled extraction and formatting.")
     note.italic = True
     note.font.name = "Calibri"
     note.font.size = Pt(9)

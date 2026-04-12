@@ -19,6 +19,7 @@ When Ramzan says `end session`, update:
 - `tasks/DECISIONS.md` if needed
 - `memory/PROJECT_MEMORY.md` if stable facts changed
 - `tasks/ARCHIVE.md` if more than 5 recent sessions are kept
+- check `git status` for new or changed MAE files that should be included, especially Office reports and any newly created project files, and `git add` the relevant ones
 - commit the relevant session changes to git
 - push them to GitHub unless Ramzan says not to push
 
@@ -41,24 +42,9 @@ For Codex, the preferred MAE workflow is now:
 Python may do extraction and basic calculations, but final judgment belongs in the live Codex session.
 Extra documents beyond QuickBooks may be added and should be considered in the same flow.
 
-## Legacy Prototype
-
-The earlier prototype remains in the repo for reference:
-
-1. Run `python scripts/run_briefing_cycle.py`
-2. Read `data/extracted/briefing_packets.json`
-3. Present one short on-screen brief at a time:
-   - marketing
-   - tax
-   - deviation
-   - shareholder
-4. Wait for Ramzan's plain-English reply after each brief
-5. Only generate final `.docx` reports after approval
-
-The new live workflow above overrides the old direct report-generation flow in `CLAUDE.md` for Codex-led sessions.
-
 ## Notes
 
 - `CLAUDE.md` remains the detailed project instruction source.
 - `memory/PROJECT_MEMORY.md` stores stable Codex-facing project context for fast reload.
 - Update project memory when new stable facts are learned.
+- Use `python scripts/run_all_reports.py` only when Ramzan explicitly wants the bulk refresh path instead of the live topic-by-topic review.

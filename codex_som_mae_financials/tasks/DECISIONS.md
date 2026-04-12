@@ -9,15 +9,15 @@
 
 - **Report pipeline:** `extract_data.py` → 4 report scripts → `validate_all.py`, orchestrated by `run_all_reports.py`
 - **Live Codex pipeline:** `build_live_session_packet.py` → `live_session_packet.json` → live chat briefs → `live_report_payload.json` → `render_live_reports.py`
-- **Brief-first prototype:** `run_briefing_cycle.py` → `briefing_packets.json` → 4 short on-screen briefs → approved final report generation
+- **Interactive workflow rule:** For Codex-led interactive review, use only the live Codex pipeline. The earlier brief-first prototype is retired.
 - **Shared helpers:** All 4 report scripts import from `scripts/report_helpers.py` — do not modify without testing all 4
 - **Live session evidence cache:** `data/extracted/live_session_packet.json` — regenerated each live session
 - **Live report payload template:** `data/extracted/live_report_payload.template.json` — used as the fill-in shape after live review
 - **Live report naming:** `reports/codex_live_report_<topic>_mae_YYYY-MM-DD.docx`
+- **Live report structure:** Answer-first. Start with the main question, then the direct answer, then the best estimate, then key numbers, then short supporting detail.
 - **Report format:** "Easy read" standard — Quick Summary (blue callout + red callout), numbered sections, Action Checklist, Bottom Line, Disclaimer
-- **Report naming:** `reports/claude_report_<topic>_mae_YYYY-MM-DD.docx`
+- **Bulk pipeline report naming:** `reports/claude_report_<topic>_mae_YYYY-MM-DD.docx`
 - **Extracted data cache:** `data/extracted/run_data.json` — gitignored, regenerated each run
-- **Brief packet cache:** `data/extracted/briefing_packets.json` — gitignored, regenerated each run
 - **Financial constants:** Live in `docs/constants.md` — update that file when new audited data arrives. Do not store in CLAUDE.md.
 - **Lean Report Run Protocol:** When user drops new QB files → run `python scripts/run_all_reports.py` → read `reports/validation_summary_<date>.txt` → summarize. Do NOT read scripts or data files unless a check fails.
 - **Codex default workflow:** For new MAE sessions, use the live Codex pipeline before generating final reports.

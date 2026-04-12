@@ -17,3 +17,11 @@ Reports generated before the April 2026 runs. Superseded by Apr 2, 2026 reports.
 - `reports/claude_report_deviation_mae_2026-03-11.docx` — Task #3, Mar 11, 2026 (Handouts +101.7%; Insurance +58.9%; Marketing Wages $24K new)
 - `reports/claude_report_shareholder_mae_2026-02-22.docx` — Task #4, Feb 22, 2026 (Ramzan owes −$12,063; Rezai owed $3,264; Hajj flagged)
 - `reports/claude_report_shareholder_mae_2026-03-11.docx` — Task #4, Mar 11, 2026 (Ramzan −$8,799; Rezai zeroed via JE-11; JE-11 documentation required)
+
+## Archived Sessions
+
+### Session 1 — 2026-03-11
+
+**Focus:** Full report run — all 4 reports regenerated with updated QuickBooks YTD data.
+**Key findings:** Marketing spend $61,328 YTD (gap $34,700–$40,300 remaining); projected revenue ~$3.39M; Apr 30 tax installment $13,565 URGENT; Ramzan shareholder advance improved to −$8,799; JE-11 documentation still required.
+**Next:** Run again when next QuickBooks export arrives.
