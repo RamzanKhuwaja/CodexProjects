@@ -1,0 +1,61 @@
+============================================================
+  codex_pdf2md — Quick Reference Cheatsheet
+============================================================
+
+PROJECT
+  Convert PDF documents into Markdown files
+
+MEMORY
+  memory/PROJECT_MEMORY.md    Stable project facts and preferences
+  tasks/TASKS.md             Current state
+  tasks/DECISIONS.md         Locked decisions
+  tasks/ARCHIVE.md           Older session history
+
+SESSION PHRASES
+  "start session"            Reload project memory and resume from last recorded state
+  "end session"              Record the session, decisions, and next step
+
+------------------------------------------------------------
+SCRIPTS
+------------------------------------------------------------
+
+  pdf_to_md.py:
+    python scripts/pdf_to_md.py --input data/current/<file>.pdf --output output/<file>.md
+
+  Output: output/<source-name>.md
+
+------------------------------------------------------------
+DATA FILES (data/current/)
+------------------------------------------------------------
+
+  Source PDF files to convert
+
+------------------------------------------------------------
+OUTPUT
+------------------------------------------------------------
+
+  Markdown files generated from the source PDFs
+
+------------------------------------------------------------
+KEY NUMBERS / REFERENCE VALUES
+------------------------------------------------------------
+
+  None recorded yet
+
+------------------------------------------------------------
+TRIGGER PHRASES
+------------------------------------------------------------
+
+  "start session"      - Reload project context from memory and task files
+  "end session"        - Save the project session state for the next visit
+  "Perform task #1"    - Convert PDFs in data/current into Markdown output
+
+------------------------------------------------------------
+NOTES
+------------------------------------------------------------
+
+  - Run all scripts from the project root folder
+  - Put raw PDFs in data/current and keep generated Markdown in output
+  - Use docs/Requirements.md as the project source of truth
+
+============================================================
