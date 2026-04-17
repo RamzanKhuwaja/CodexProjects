@@ -16,8 +16,8 @@
 ## Current Position
 
 **Status:** Active.
-**Last session:** 2026-04-10 — copied the newer VAU live-review design into the MAE project, verified the new MAE live packet builder, and pushed the MAE changes to GitHub.
-**Next step:** On the next MAE data refresh, use the new live packet workflow in a real session and refine only if real-use friction appears.
+**Last session:** 2026-04-17 — imported `ProgressMonitoring` into `CodexProjects` as `codex_progress_monitoring`, verified the moved paths, removed the original folder, and pushed the workspace update to GitHub.
+**Next step:** Start a project session in `codex_progress_monitoring` and continue project-level work from its own `AGENTS.md`, `memory/`, and `tasks/` files.
 
 ## Open Items
 
@@ -25,6 +25,20 @@
 - Decide whether Codex needs a separate workspace memory pattern or should stay file-based only.
 
 ## Session Log
+
+### Session 4 — 2026-04-17
+
+**Focus:** Onboarded `ProgressMonitoring` into the workspace as a managed Codex project.
+
+- Imported the existing code history into the workspace repo under `codex_progress_monitoring`.
+- Copied the project's active data, reporting, and support folders into the new workspace project root.
+- Added template-style project session management files without forcing a risky codebase refactor.
+- Patched path-sensitive import and root-resolution behavior so the project runs correctly from inside `CodexProjects`.
+- Verified the moved project with compile checks, download checks, and student-map generation from the new location.
+- Removed the original `C:\Users\ramza\My Software Projects\ProgressMonitoring` folder after verification.
+- Committed and pushed the workspace import as `09222d4`.
+
+**Next:** Work inside `codex_progress_monitoring` as a project session rather than continuing at the workspace level.
 
 ### Session 3 — 2026-04-10
 

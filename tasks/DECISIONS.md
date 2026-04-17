@@ -35,6 +35,7 @@
 - New Codex projects should start from `_project_template/`.
 - Project-specific instructions should live in `AGENTS.md`.
 - `README.md` files are not part of the standard CodexProjects pattern.
+- When onboarding an older standalone project into the workspace, preserve its working layout when needed for safety and layer the template-style session/memory/task system around it instead of forcing an immediate refactor.
 
 ## Local Codex Config
 
