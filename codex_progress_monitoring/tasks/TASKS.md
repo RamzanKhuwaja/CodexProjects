@@ -11,16 +11,29 @@
 ## Current Position
 
 **Status:** Active.
-**Last session:** 2025-09-18 — hardened parsers and wrappers, improved validation, and verified the code compiles.
-**Next step:** Run the VAU and MAE pipelines against fresh Brightspace exports from the moved workspace location and confirm the updated parsing heuristics still behave correctly.
+**Last session:** 2026-04-17 — validated the moved workspace with duplicate-check runs and captured requirements for a supervised automation layer.
+**Next step:** Draft the supervised runner design, including halt/continue rules, runtime controls for test vs live execution, and a first implementation scope for VAU before extending to MAE.
 
 ## Open Items
 
 - Validate the moved workspace paths against the download checks and student-map generation scripts.
-- Decide whether any new output should move into `output/` or whether `Ready For Printing/` remains the long-term report location.
+- Formalize the orchestration design so manual script runs and automated runs share the same underlying campus code.
+- Replace hand-edited globals with safer runtime configuration for campus selection and side-effect control.
+- Decide how to store per-run history so future teacher and principal summaries can compare new results to prior runs.
 - Add regression tests around the HTML and CSV parsers using anonymized fixtures when the workflow is stable enough.
 
 ## Session Log
+
+### Session 3 — 2026-04-17
+
+**Focus:** Resume the project, validate the moved workspace, and capture automation requirements.
+- Read the project operating files and resumed from the recorded next step.
+- Verified recent Brightspace exports exist on disk: VAU dated 2026-03-29 and MAE dated 2026-04-14.
+- Ran `VAU_1_CheckAllDups.py` and `MAE_1_CheckAllDups.py` successfully from the new project root, confirming the moved path logic works.
+- Observed real duplicate-export findings in both campuses and Outlook-not-running warnings on notification steps, so no deeper report pipeline was run.
+- Captured the planned direction for future work: preserve manual MAE/VAU entry scripts, build a supervised runner above the existing code, never auto-start Outlook, pause on key failures, and support test-send before approved live-send.
+
+**Next:** Write the orchestration design spec and identify the minimum refactor needed to replace manual global toggles with run-time controls.
 
 ### Session 1 — 2026-04-17
 

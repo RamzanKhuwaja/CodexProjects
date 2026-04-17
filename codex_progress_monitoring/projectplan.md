@@ -63,10 +63,11 @@
 - `pdfkit` additionally relies on a system-level `wkhtmltopdf` binary.
 
 ## Short-Term Priorities (next 1-2 weeks)
-1. Confirm current Brightspace export process still matches VAU/MAE class map schemas (validate against Fall 2025 rosters).
-2. Add sanity checks in `GenerateStudentMap` to fail fast when expected columns (e.g., `Start Week`, `Parent Email`) are missing or renamed.
-3. Document Outlook profile requirements and test email routing with `TESTING = False` in a safe environment.
-4. Align MAE pipeline with VAU updates; ensure both campuses share consistent thresholds and report layouts.
+1. Design a supervised campus pipeline runner that preserves manual MAE/VAU entry scripts while orchestrating the same underlying steps safely.
+2. Confirm current Brightspace export process still matches VAU/MAE class map schemas (validate against Spring 2026 rosters and current export naming).
+3. Replace hand-edited runtime globals with safer run-time controls for campus, testing/live mode, and side-effect gating.
+4. Add sanity checks in `GenerateStudentMap` to fail fast when expected columns (e.g., `Start Week`, `Parent Email`) are missing or renamed.
+5. Align MAE pipeline with VAU updates; ensure both campuses share consistent thresholds and report layouts.
 
 ## Long-Term Opportunities
 - Parameterize campus metadata (email recipients, thresholds) in external config to reduce code edits during turnover.
@@ -82,6 +83,7 @@
 ## Risks & Open Questions
 - Brightspace export formats may shift (column renames) without notice; manual review currently required.
 - Reliance on Outlook COM automation ties execution to Windows with Outlook configured and running.
+- Email-capable steps must never start Outlook automatically; the operator has to open Outlook manually before test or live sends.
 - `pdfkit` usage will fail silently without wkhtmltopdf; need confirmation of installation status on run machine.
 - Historical Dropbox paths in runbook should be validated against present directory structure.
 
@@ -93,6 +95,13 @@
 ## Session Journal
 _Add a new entry per session (reverse chronological)._
 
+### 2026-04-17 — Validation And Automation Design Capture
+- Verified the moved workspace path by running `VAU_1_CheckAllDups.py` and `MAE_1_CheckAllDups.py` successfully from the project root.
+- Confirmed current exports on disk are recent enough for validation work: VAU data dated March 29, 2026 and MAE data dated April 14, 2026.
+- Captured user requirements for a phased orchestration layer: keep manual campus scripts available, reuse the existing underlying code, execute one step at a time with outcome review before advancing, halt on key failures, and separate test-send from approved live-send.
+- Confirmed Outlook must remain operator-controlled: scripts may connect only to an already running Outlook instance and must never launch Outlook automatically.
+- Deferred deeper pipeline execution until duplicate-export cleanup and orchestration rules are formalized.
+
 ### 2025-09-18 — Repository Documentation Pass
 - Reviewed Python modules in `Common/`, `VAU/`, and `MAE/` to understand data flow and reporting jobs.
 - Extracted operational steps from `Common/What to do weekly.docx` and summarized above.
@@ -101,8 +110,9 @@ _Add a new entry per session (reverse chronological)._
 
 ## Next Session Checklist
 - Read the latest Session Journal entry.
-- Review Short-Term Priorities and confirm statuses.
-- Check for new data exports in `Data/<Campus>/` directories.
-- Confirm toggle settings (`TESTING`, `SEND_EMAIL`) before running any scripts.
+- Draft the supervised runner design and explicit halt/continue rules for each campus step.
+- Decide how runtime controls will replace hand-edited globals such as `TESTING`, `SEND_EMAIL`, and `PRINT_REPORT`.
+- Check for new data exports in `Data/<Campus>/` directories and clean duplicate downloads before any live pipeline run.
+- Confirm Outlook is already open before any email-capable test or live send.
 - After each work session, append a new entry under "Session Journal" and refresh the checklist so the next pickup is seamless.
 
