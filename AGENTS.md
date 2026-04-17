@@ -9,6 +9,7 @@ This is a workspace containing multiple independent Codex projects, each in its 
 ```text
 CodexProjects/
 ├── _project_template/        # Template — copy this to start a new project
+├── codex_progress_monitoring/# Brightspace progress monitoring automation
 ├── codex_som_mae_financials/ # Spirit of Math Markham East financial analysis
 ├── codex_som_vau_financials/ # Spirit of Math Vaughan financial analysis
 └── tasks/                    # Workspace-level session tracking

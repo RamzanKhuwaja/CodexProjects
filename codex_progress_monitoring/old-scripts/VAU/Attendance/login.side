@@ -1,0 +1,154 @@
+{
+  "id": "a60759d1-24fc-4dca-9cb4-5bc1b6a32f21",
+  "version": "2.0",
+  "name": "1",
+  "url": "https://login.microsoftonline.com",
+  "tests": [{
+    "id": "f77aee6c-b03f-4b3c-8bff-272dc7f7d4ab",
+    "name": "login only",
+    "commands": [{
+      "id": "ac9609d9-0a43-4bca-9c16-4d12865f54b1",
+      "comment": "",
+      "command": "open",
+      "target": "https://spiritofmath.brightspace.com/",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "4d51d07b-9abd-4100-b980-e6bdb316e1ef",
+      "comment": "",
+      "command": "setWindowSize",
+      "target": "1072x904",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "e145f10c-223d-40b2-89bb-7f4c87720f65",
+      "comment": "",
+      "command": "type",
+      "target": "id=i0116",
+      "targets": [
+        ["id=i0116", "id"],
+        ["name=loginfmt", "name"],
+        ["css=#i0116", "css:finder"],
+        ["xpath=//input[@id='i0116']", "xpath:attributes"],
+        ["xpath=//div[@id='lightbox']/div[3]/div/div/div/div[2]/div[2]/div/input", "xpath:idRelative"],
+        ["xpath=//input", "xpath:position"]
+      ],
+      "value": "rkhuwaja@spiritofmath.com"
+    }, {
+      "id": "89b3457b-93d7-4452-9fca-3d38ddb07256",
+      "comment": "",
+      "command": "click",
+      "target": "id=idSIButton9",
+      "targets": [
+        ["id=idSIButton9", "id"],
+        ["css=#idSIButton9", "css:finder"],
+        ["xpath=//input[@id='idSIButton9']", "xpath:attributes"],
+        ["xpath=//div[@id='lightbox']/div[3]/div/div/div/div[4]/div/div/div/div[2]/input", "xpath:idRelative"],
+        ["xpath=//div[2]/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "1e533365-d1a5-4859-af40-2de520f9523e",
+      "comment": "",
+      "command": "mouseOver",
+      "target": "id=idSIButton9",
+      "targets": [
+        ["id=idSIButton9", "id"],
+        ["css=#idSIButton9", "css:finder"],
+        ["xpath=//input[@id='idSIButton9']", "xpath:attributes"],
+        ["xpath=//div[@id='lightbox']/div[3]/div/div/div/div[4]/div/div/div/div[2]/input", "xpath:idRelative"],
+        ["xpath=//div[2]/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "65fea0d3-b353-4cec-bc8a-67fb2dbe0d1c",
+      "comment": "",
+      "command": "mouseOver",
+      "target": "id=idSIButton9",
+      "targets": [
+        ["id=idSIButton9", "id"],
+        ["css=#idSIButton9", "css:finder"],
+        ["xpath=//input[@id='idSIButton9']", "xpath:attributes"],
+        ["xpath=//div[@id='lightbox']/div[3]/div/div/div/div[4]/div/div/div/div[2]/input", "xpath:idRelative"],
+        ["xpath=//div[2]/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "1cd6251f-dac0-4bf5-88fe-7346932f6d0e",
+      "comment": "",
+      "command": "type",
+      "target": "id=i0118",
+      "targets": [
+        ["id=i0118", "id"],
+        ["name=passwd", "name"],
+        ["css=#i0118", "css:finder"],
+        ["xpath=//input[@id='i0118']", "xpath:attributes"],
+        ["xpath=//div[@id='lightbox']/div[3]/div/div[2]/div/div[3]/div/div[2]/input", "xpath:idRelative"],
+        ["xpath=//div[2]/input", "xpath:position"]
+      ],
+      "value": "Maleeha11**"
+    }, {
+      "id": "0f995b6a-f40f-4b96-93c6-08d26839e56a",
+      "comment": "",
+      "command": "click",
+      "target": "id=idSIButton9",
+      "targets": [
+        ["id=idSIButton9", "id"],
+        ["css=#idSIButton9", "css:finder"],
+        ["xpath=//input[@id='idSIButton9']", "xpath:attributes"],
+        ["xpath=//div[@id='lightbox']/div[3]/div/div[2]/div/div[4]/div[2]/div/div/div/div/input", "xpath:idRelative"],
+        ["xpath=//div[4]/div[2]/div/div/div/div/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "680e0a88-14bc-4f9e-a609-d9f1663d5c97",
+      "comment": "",
+      "command": "mouseOver",
+      "target": "id=idSIButton9",
+      "targets": [
+        ["id=idSIButton9", "id"],
+        ["css=#idSIButton9", "css:finder"],
+        ["xpath=//input[@id='idSIButton9']", "xpath:attributes"],
+        ["xpath=//div[@id='lightbox']/div[3]/div/div[2]/div/div[4]/div[2]/div/div/div/div/input", "xpath:idRelative"],
+        ["xpath=//div[4]/div[2]/div/div/div/div/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "edd0e2f5-4722-449d-be10-bc4d748db2ee",
+      "comment": "",
+      "command": "mouseOut",
+      "target": "id=idSIButton9",
+      "targets": [
+        ["id=idSIButton9", "id"],
+        ["css=#idSIButton9", "css:finder"],
+        ["xpath=//input[@id='idSIButton9']", "xpath:attributes"],
+        ["xpath=//div[@id='lightbox']/div[4]/div/div[2]/div/div[4]/div[2]/div/div/div/div/input", "xpath:idRelative"],
+        ["xpath=//div[4]/div[2]/div/div/div/div/input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "042a989e-04c9-4b2d-a353-9146b98e6ac4",
+      "comment": "",
+      "command": "click",
+      "target": "id=idSIButton9",
+      "targets": [
+        ["id=idSIButton9", "id"],
+        ["css=#idSIButton9", "css:finder"],
+        ["xpath=//input[@id='idSIButton9']", "xpath:attributes"],
+        ["xpath=//div[@id='lightbox']/div[3]/div/div[2]/div/div[3]/div[2]/div/div/div[2]/input", "xpath:idRelative"],
+        ["xpath=//div[2]/input", "xpath:position"]
+      ],
+      "value": ""
+    }]
+  }],
+  "suites": [{
+    "id": "0698be71-8d05-4c66-8b7f-4d539358962a",
+    "name": "Default Suite",
+    "persistSession": false,
+    "parallel": false,
+    "timeout": 300,
+    "tests": ["f77aee6c-b03f-4b3c-8bff-272dc7f7d4ab"]
+  }],
+  "urls": ["https://login.microsoftonline.com/"],
+  "plugins": []
+}

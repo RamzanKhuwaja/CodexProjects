@@ -1,0 +1,7 @@
+pandas
+numpy
+openpyxl
+beautifulsoup4
+lxml
+pdfkit
+pywin32

@@ -1,0 +1,82 @@
+============================================================
+  codex_progress_monitoring — Quick Reference Cheatsheet
+============================================================
+
+PROJECT
+  Brightspace progress-monitoring automation for VAU and MAE.
+
+MEMORY
+  projectplan.md              Main operating reference
+  memory/PROJECT_MEMORY.md    Stable project facts and cautions
+  tasks/TASKS.md              Current state
+  tasks/DECISIONS.md          Locked decisions
+  tasks/ARCHIVE.md            Older session history
+  docs/LEGACY_SESSION_NOTES.md Pre-template session notes
+
+SESSION PHRASES
+  "start session"             Reload project context and resume work
+  "end session"               Record the session, decisions, and next step
+
+------------------------------------------------------------
+SCRIPTS
+------------------------------------------------------------
+
+  Verify downloaded files:
+    python MAE/MAE_0_CheckDownloadedFiles.py
+    python VAU/VAU_0_CheckDownloadedFiles.py
+
+  Check duplicates:
+    python MAE/MAE_1_CheckAllDups.py
+    python VAU/VAU_1_CheckAllDups.py
+
+  Rebuild student maps:
+    python MAE/MAE_2_GenerateStudentMap.py
+    python VAU/VAU_2_GenerateStudentMap.py
+
+  Generate reports:
+    python MAE/MAE_3_AttendanceMissing.py
+    python MAE/MAE_4_StrugglingStudents.py
+    python MAE/MAE_5_RemindForBSLogin.py
+    python MAE/MAE_6_HighHonoursStudents.py
+    python MAE/MAE_7_NeedsToAttendMoreRegularly.py
+    python VAU/VAU_3_AttendanceMissing.py
+    python VAU/VAU_4_StrugglingStudents.py
+    python VAU/VAU_5_RemindForBSLogin.py
+    python VAU/VAU_6_HighHonoursStudents.py
+    python VAU/VAU_7_NeedsToAttendMoreRegularly.py
+
+------------------------------------------------------------
+DATA LAYOUT
+------------------------------------------------------------
+
+  Data/<Campus>/{Attendance,ClassList,Grades}
+  Data/Debugging/<Campus>/{Attendance,ClassList,Grades}
+  Ready For Printing/<Campus>/
+  For Data Entry Person/
+  WeekToWeek/
+
+------------------------------------------------------------
+KEY SETTINGS
+------------------------------------------------------------
+
+  Common/my_utils.py:
+    DEBUG
+    TESTING
+    SEND_EMAIL
+    PRINT_REPORT
+    SEND_SUMMARY
+    GRADES_MIN_BAR
+    HIGH_HONOURS_MIN_BAR
+    NOT_LOGGED_IN_SINCE
+    ATTENDANCE_MIN_BAR
+
+------------------------------------------------------------
+NOTES
+------------------------------------------------------------
+
+  - Run scripts from the project root.
+  - Outlook COM automation requires Windows Outlook to be configured.
+  - pdfkit requires wkhtmltopdf to be installed locally.
+  - Reports continue to write to Ready For Printing/, not output/.
+
+============================================================
