@@ -11,18 +11,33 @@
 ## Current Position
 
 **Status:** Active.
-**Last session:** 2026-04-17 — validated the moved workspace with duplicate-check runs and captured requirements for a supervised automation layer.
-**Next step:** Draft the supervised runner design, including halt/continue rules, runtime controls for test vs live execution, and a first implementation scope for VAU before extending to MAE.
+**Last session:** 2026-04-18 — implemented the supervised runner, unified duplicate-notification emails, added the principal-summary step, and validated VAU test-send flows.
+**Next step:** When fresh VAU data arrives, run `run pipeline for VAU`, confirm the week number after `*_0_CheckDownloadedFiles`, then validate the full main flow and the new principal-summary step against the new exports.
 
 ## Open Items
 
-- Validate the moved workspace paths against the download checks and student-map generation scripts.
-- Formalize the orchestration design so manual script runs and automated runs share the same underlying campus code.
-- Replace hand-edited globals with safer runtime configuration for campus selection and side-effect control.
-- Decide how to store per-run history so future teacher and principal summaries can compare new results to prior runs.
+- Validate the supervised runner end-to-end against fresh VAU exports, including the new post-`*_4` principal-summary step.
+- Run an MAE test-send pass for the principal-summary step so both campuses are visually confirmed under the new shared formatting.
+- Decide whether to persist per-run history so future teacher and principal summaries can compare new results to prior runs.
 - Add regression tests around the HTML and CSV parsers using anonymized fixtures when the workflow is stable enough.
 
 ## Session Log
+
+### Session 4 — 2026-04-18
+
+**Focus:** Implement the supervised pipeline design, unify office/principal email presentation, and validate VAU test-send behavior.
+- Added `Common/supervised_runner.py` to run `start`, `main`, and `optional` flows one step at a time for both VAU and MAE, with explicit mode control and per-step statuses.
+- Added runtime overrides in `Common/my_utils.py` so campus, test/live mode, email sending, printing, and `THIS_WEEK_NUM` can be controlled without hand-editing globals.
+- Enforced the interaction rule that `*_0_CheckDownloadedFiles` runs first and the week number is requested only after that step passes.
+- Changed duplicate handling so `*_1_CheckAllDups` reports warnings but does not block the primary pipeline, and unified the duplicate office email format for both campuses.
+- Added a new shared post-`*_4` principal-summary step for both campuses, with a formatted workbook attachment and a campus-specific production recipient model.
+- Improved the struggling-students workbook formatting for both campuses by styling the `Details` and `Summary` sheets, sorting the summary by `Total Students`, and making the `TOTAL` row stand out.
+- Sent successful VAU test emails for the duplicate cleanup notice and the new principal-summary step, both routed to the test recipient.
+- Recorded the production principal recipients:
+  - VAU: Angela Armstrong (`aarmstrong@spiritofmath.com`), CC `vaughan@spiritofmath.com`
+  - MAE: Lisa Chiu (`lisachiu@spiritofmath.com`), CC `markhameast@spiritofmath.com`
+
+**Next:** Use fresh VAU exports tomorrow to run the supervised flow from `run pipeline for VAU`, confirm the week number after step `0`, and validate the updated main pipeline on current data.
 
 ### Session 3 — 2026-04-17
 

@@ -7,6 +7,7 @@ import csv
 import math
 import html
 from io import StringIO
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -16,6 +17,9 @@ from collections import Counter
 import glob
 import numpy as np
 import openpyxl
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.table import Table, TableStyleInfo
 try:
     from bs4 import BeautifulSoup
     _BS4_IMPORT_ERROR: Exception | None = None
@@ -152,6 +156,18 @@ class TableData:
         return [row.copy() for row in self.rows]
 
 
+@dataclass(frozen=True)
+class RuntimeOptions:
+    campus: str | None = None
+    testing: bool | None = None
+    send_email: bool | None = None
+    print_report: bool | None = None
+    this_week_num: int | None = None
+    override_to_email: str | None = None
+    override_cc_email: str | None = None
+    allow_live_email: bool = False
+
+
 def ensure_table_data(data: object, default_columns: Sequence[str] | None = None) -> TableData | None:
     if data is None:
         return None
@@ -213,6 +229,7 @@ NOT_LOGGED_IN_SINCE = int(14) # Not logged in since last 2 weeks!
 ATTENDANCE_MIN_BAR = int(80) # Min attendance required (in %)
 
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
+principal_name = principal_to_email = principal_cc_email = ""
 
 SUPPORTED_DATE_FORMATS = [
     "%b %d, %Y %I:%M %p",
@@ -229,6 +246,7 @@ CLASS_CODE_REGEX = re.compile(r"(?:SOMp|MAE)\w+", re.IGNORECASE)
 _WARNED_MESSAGES: set[tuple[str, str]] = set()
 _OUTLOOK_APP = None
 _OUTLOOK_CONNECTION_FAILED = False
+_RUNTIME_OPTION_STACK: list[RuntimeOptions] = []
 
 
 def warn_once(level: str, message: str) -> None:
@@ -238,23 +256,123 @@ def warn_once(level: str, message: str) -> None:
         _WARNED_MESSAGES.add(key)
 
 
+def _current_runtime_options() -> RuntimeOptions | None:
+    if not _RUNTIME_OPTION_STACK:
+        return None
+    return _RUNTIME_OPTION_STACK[-1]
+
+
+def outlook_is_running() -> tuple[bool, str]:
+    global _OUTLOOK_APP, _OUTLOOK_CONNECTION_FAILED
+
+    if _OUTLOOK_APP is not None:
+        return True, "Outlook is running."
+
+    try:
+        _OUTLOOK_APP = email_client.GetActiveObject("outlook.application")
+        _OUTLOOK_CONNECTION_FAILED = False
+        return True, "Outlook is running."
+    except Exception as exc:
+        _OUTLOOK_APP = None
+        _OUTLOOK_CONNECTION_FAILED = True
+        return False, f"Outlook is not running: {exc}"
+
+
+def describe_runtime_state() -> str:
+    campus = CAMPUS or "(unset)"
+    mode = "TEST" if TESTING else "LIVE"
+    return (
+        f"campus={campus}, mode={mode}, send_email={SEND_EMAIL}, "
+        f"print_report={PRINT_REPORT}, week={THIS_WEEK_NUM}"
+    )
+
+
+@contextmanager
+def runtime_options(
+    *,
+    campus: str | None = None,
+    testing: bool | None = None,
+    send_email: bool | None = None,
+    print_report: bool | None = None,
+    this_week_num: int | None = None,
+    override_to_email: str | None = None,
+    override_cc_email: str | None = None,
+    allow_live_email: bool = False,
+):
+    global TESTING, SEND_EMAIL, PRINT_REPORT, THIS_WEEK_NUM, CAMPUS, to_email, cc_email
+    options = RuntimeOptions(
+        campus=campus,
+        testing=testing,
+        send_email=send_email,
+        print_report=print_report,
+        this_week_num=this_week_num,
+        override_to_email=override_to_email,
+        override_cc_email=override_cc_email,
+        allow_live_email=allow_live_email,
+    )
+    effective_testing = TESTING if testing is None else bool(testing)
+    effective_send_email = SEND_EMAIL if send_email is None else bool(send_email)
+    if effective_send_email and not effective_testing and not allow_live_email:
+        raise ValueError(
+            "Live email sends require explicit approval. "
+            "Re-run with explicit live-send confirmation after review."
+        )
+
+    snapshot = {
+        "TESTING": TESTING,
+        "SEND_EMAIL": SEND_EMAIL,
+        "PRINT_REPORT": PRINT_REPORT,
+        "THIS_WEEK_NUM": THIS_WEEK_NUM,
+        "CAMPUS": CAMPUS,
+        "to_email": to_email,
+        "cc_email": cc_email,
+        "principal_name": principal_name,
+        "principal_to_email": principal_to_email,
+        "principal_cc_email": principal_cc_email,
+    }
+    _RUNTIME_OPTION_STACK.append(options)
+    try:
+        if campus is not None:
+            set_campus_info(campus)
+        if testing is not None:
+            TESTING = bool(testing)
+        if send_email is not None:
+            SEND_EMAIL = bool(send_email)
+        if print_report is not None:
+            PRINT_REPORT = bool(print_report)
+        if this_week_num is not None:
+            THIS_WEEK_NUM = int(this_week_num)
+        if override_to_email is not None:
+            to_email = override_to_email
+        if override_cc_email is not None:
+            cc_email = override_cc_email
+        yield options
+    finally:
+        _RUNTIME_OPTION_STACK.pop()
+        TESTING = snapshot["TESTING"]
+        SEND_EMAIL = snapshot["SEND_EMAIL"]
+        PRINT_REPORT = snapshot["PRINT_REPORT"]
+        THIS_WEEK_NUM = snapshot["THIS_WEEK_NUM"]
+        CAMPUS = snapshot["CAMPUS"]
+        to_email = snapshot["to_email"]
+        cc_email = snapshot["cc_email"]
+        globals()["principal_name"] = snapshot["principal_name"]
+        globals()["principal_to_email"] = snapshot["principal_to_email"]
+        globals()["principal_cc_email"] = snapshot["principal_cc_email"]
+
+
 def _get_outlook_app():
     global _OUTLOOK_APP, _OUTLOOK_CONNECTION_FAILED
 
-    if _OUTLOOK_CONNECTION_FAILED:
-        return None
     if _OUTLOOK_APP is not None:
         return _OUTLOOK_APP
 
-    try:
-        # Only connect to an already running Outlook instance.
-        # Do not launch Outlook automatically from scripts.
-        _OUTLOOK_APP = email_client.GetActiveObject("outlook.application")
-    except Exception as exc:
+    is_running, message = outlook_is_running()
+    if not is_running:
         _OUTLOOK_CONNECTION_FAILED = True
         warn_once(
             "ERROR",
-            f"Outlook is not running. Email was not sent and Outlook was not started automatically: {exc}",
+            f"{message}. Email was not sent and Outlook was not started automatically.",
         )
         return None
 
@@ -357,6 +475,107 @@ def render_html_table(
     wrapper_parts.append(table_html)
     wrapper_parts.append('</div>')
     return ''.join(wrapper_parts)
+
+
+def summarize_class_list_duplicates_for_office(
+    duplicates_data: TableData | object | None,
+) -> tuple[TableData | None, dict[str, int]]:
+    source_tables = duplicates_data if isinstance(duplicates_data, list) else [duplicates_data]
+    required_columns = ["Org Defined ID", "Student Full Name", "Class Code"]
+    merged_rows: list[dict[str, object]] = []
+
+    for item in source_tables:
+        table = ensure_table_data(item)
+        if table is None or table.is_empty:
+            continue
+        if not all(column in table.columns for column in required_columns):
+            continue
+        merged_rows.extend(table.select(required_columns).rows)
+
+    if not merged_rows:
+        return None, {"total": 0, "same_class": 0, "multi_class": 0}
+
+    grouped: dict[tuple[str, str], dict[str, object]] = {}
+    for row in merged_rows:
+        student_id = str(row.get("Org Defined ID", "")).strip()
+        student_name = str(row.get("Student Full Name", "")).strip()
+        class_code = str(row.get("Class Code", "")).strip()
+        if not student_id and not student_name:
+            continue
+
+        key = (student_id, student_name)
+        entry = grouped.setdefault(
+            key,
+            {
+                "Student ID": student_id,
+                "Student Name": student_name,
+                "Class Codes": [],
+                "Row Count": 0,
+            },
+        )
+        entry["Row Count"] = int(entry["Row Count"]) + 1
+        if class_code and class_code not in entry["Class Codes"]:
+            entry["Class Codes"].append(class_code)
+
+    summary_rows: list[dict[str, object]] = []
+    same_class = 0
+    multi_class = 0
+    for entry in grouped.values():
+        class_codes = sorted(str(code) for code in entry["Class Codes"] if str(code).strip())
+        if len(class_codes) > 1:
+            issue = "Appears in multiple classes"
+            multi_class += 1
+        else:
+            issue = "Listed twice in the same class"
+            same_class += 1
+
+        summary_rows.append(
+            {
+                "Student ID": entry["Student ID"],
+                "Student Name": entry["Student Name"],
+                "Issue": issue,
+                "Class Codes": ", ".join(class_codes),
+            }
+        )
+
+    if not summary_rows:
+        return None, {"total": 0, "same_class": 0, "multi_class": 0}
+
+    summary_table = TableData(
+        ["Student ID", "Student Name", "Issue", "Class Codes"],
+        summary_rows,
+    ).sorted(["Student Name", "Student ID"])
+    counts = {
+        "total": len(summary_rows),
+        "same_class": same_class,
+        "multi_class": multi_class,
+    }
+    return summary_table, counts
+
+
+def build_office_duplicate_email(
+    campus: str,
+    duplicates_data: TableData | object | None,
+) -> tuple[str | None, str | None, str | None]:
+    summary_table, counts = summarize_class_list_duplicates_for_office(duplicates_data)
+    if summary_table is None or summary_table.is_empty:
+        return None, None, None
+
+    campus_code = str(campus).strip().upper()
+    subject = f"{campus_code} Brightspace enrollments to review"
+    intro_html = (
+        "Hello Office,<br><br>"
+        "Please review the Brightspace enrollments below and remove the extra enrollment for each student where needed.<br><br>"
+        f"Summary: {counts['total']} students need review. "
+        f"{counts['same_class']} are listed twice in the same class roster. "
+        f"{counts['multi_class']} appear in multiple classes."
+    )
+    details_html = render_html_table(
+        summary_table,
+        title="Students To Review In Brightspace",
+        subtitle="Remove the extra Brightspace enrollment for each student listed below.",
+    )
+    return subject, intro_html, details_html
 
 
 
@@ -718,57 +937,39 @@ MAE_REPORT_DIRECTORY = os.path.join(_PROJ_ROOT, 'Ready For Printing', 'MAE')
 
 
 def set_campus_info(campus_code):
-
-
-
-    global CAMPUS, to_email, cc_email
-
-
+    global CAMPUS, to_email, cc_email, principal_name, principal_to_email, principal_cc_email
+    campus_code = str(campus_code).strip().upper()
 
     if campus_code == "VAU":
-
-
-
-        to_email = "rkhuwaja@spiritofmath.com"
-
-
-
-        cc_email = "vaughan@spiritofmath.com"
-
-
-
-        CAMPUS = campus_code
-
-
-
+        default_to_email = "rkhuwaja@spiritofmath.com"
+        default_cc_email = "vaughan@spiritofmath.com"
+        default_principal_name = "Angela Armstrong"
+        default_principal_to_email = "aarmstrong@spiritofmath.com"
+        default_principal_cc_email = "vaughan@spiritofmath.com"
     elif campus_code == "MAE":
-
-
-
-        to_email = "rkhuwaja@spiritofmath.com"
-
-
-
-        cc_email = "markhameast@spiritofmath.com"
-
-
-
-        CAMPUS = campus_code
-
-
-
+        default_to_email = "rkhuwaja@spiritofmath.com"
+        default_cc_email = "markhameast@spiritofmath.com"
+        default_principal_name = "Lisa Chiu"
+        default_principal_to_email = "lisachiu@spiritofmath.com"
+        default_principal_cc_email = "markhameast@spiritofmath.com"
     else:
+        raise ValueError(f"Invalid campus code '{campus_code}'")
 
+    CAMPUS = campus_code
+    to_email = default_to_email
+    cc_email = default_cc_email
+    principal_name = default_principal_name
+    principal_to_email = default_principal_to_email
+    principal_cc_email = default_principal_cc_email
 
+    options = _current_runtime_options()
+    if options is None:
+        return
 
-        print("ERROR: Invalid campus code")
-
-
-
-
-
-
-
+    if options.override_to_email is not None:
+        to_email = options.override_to_email
+    if options.override_cc_email is not None:
+        cc_email = options.override_cc_email
 def check_duplicates_in_column(df, column_name) -> TableData | None:
     if PANDAS_AVAILABLE and hasattr(df, "duplicated"):
         duplicates = df[df.duplicated(column_name, keep=False)]  # type: ignore[index]
@@ -994,10 +1195,17 @@ def clean_cell(cell_value):
 
 
 
-def send_email(to: str | None, cc: str | None, subject: str, body: str) -> bool:
+def send_email_message(
+    to: str | None,
+    cc: str | None,
+    subject: str,
+    body: str,
+    *,
+    attachments: Sequence[str] | None = None,
+) -> bool:
     if not SEND_EMAIL:
         print("INFO: SEND_EMAIL is disabled; skipping email dispatch.")
-        return False
+        return True
     if not to:
         warn_once("WARNING", "No primary recipient specified for email; skipping send.")
         return False
@@ -1015,6 +1223,14 @@ def send_email(to: str | None, cc: str | None, subject: str, body: str) -> bool:
         mail.CC = cc or ""
         mail.Subject = f"{campus_prefix}{date_string}: {subject}"
         mail.HTMLBody = body or ""
+        for attachment in attachments or ():
+            if not attachment:
+                continue
+            attachment_path = os.path.abspath(str(attachment))
+            if not os.path.exists(attachment_path):
+                warn_once("WARNING", f"Attachment not found for email send: {attachment_path}")
+                return False
+            mail.Attachments.Add(attachment_path)
         mail.Send()
         time.sleep(2)
         return True
@@ -1023,6 +1239,10 @@ def send_email(to: str | None, cc: str | None, subject: str, body: str) -> bool:
         _OUTLOOK_APP = None
         print(f"ERROR: Failed to send email via Outlook: {exc}")
         return False
+
+
+def send_email(to: str | None, cc: str | None, subject: str, body: str) -> bool:
+    return send_email_message(to, cc, subject, body)
 
 
 
@@ -1037,7 +1257,7 @@ def send_duplicate_notification(
     """Send a duplicate summary email using Outlook."""
     if not SEND_EMAIL:
         print("INFO: SEND_EMAIL is disabled; skipping duplicate notification email.")
-        return False
+        return True
 
     recipient_to = to_email
     recipient_cc = to_email if TESTING else cc_email
@@ -2778,6 +2998,157 @@ def FindNeedsToAttendMoreRegularly(campus):
     ]].copy()
 
 
+def get_struggling_students_output_path(campus: str, run_datetime: datetime | None = None) -> str | None:
+    campus_code = campus.upper() if isinstance(campus, str) else campus
+    if run_datetime is None:
+        run_datetime = datetime.now()
+    date_string = run_datetime.strftime("%B %d, %Y")
+
+    if campus_code == "VAU":
+        return os.path.join(VAU_REPORT_DIRECTORY, f"VAU_StrugglingStudents-{date_string}.xlsx")
+    if campus_code == "MAE":
+        return os.path.join(MAE_REPORT_DIRECTORY, f"MAE_StrugglingStudents-{date_string}.xlsx")
+    return None
+
+
+def _build_struggling_summary(campus: str) -> pd.DataFrame:
+    df_student_map = load_student_map(campus)
+    if df_student_map.empty:
+        return pd.DataFrame()
+
+    required_cols = {'Teacher Full Name', 'Final Grade'}
+    missing_cols = [col for col in required_cols if col not in df_student_map.columns]
+    if missing_cols:
+        warn_once("WARNING", f"Missing columns {missing_cols} in student map; unable to build summary")
+        return pd.DataFrame()
+
+    df_student_map['Final Grade'] = pd.to_numeric(df_student_map['Final Grade'], errors='coerce').fillna(0)
+
+    try:
+        result = df_student_map.groupby('Teacher Full Name').apply(
+            calculate_ranges,
+            include_groups=False,
+        ).reset_index()
+    except Exception as exc:
+        print(f"ERROR: Failed to aggregate struggling student summary: {exc}")
+        return pd.DataFrame()
+
+    result_sorted = (
+        result.sort_values(by=['Total Students', 'Teacher Full Name'], ascending=[False, True])
+        if 'Total Students' in result.columns else result
+    )
+    totals = result_sorted.sum(numeric_only=True)
+    totals_df = pd.DataFrame([["TOTAL"] + totals.tolist()], columns=result_sorted.columns)
+    return pd.concat([result_sorted, totals_df], ignore_index=True)
+
+
+def _autofit_columns(ws) -> None:
+    for column_cells in ws.columns:
+        max_length = 0
+        column_letter = get_column_letter(column_cells[0].column)
+        for cell in column_cells:
+            cell_value = "" if cell.value is None else str(cell.value)
+            max_length = max(max_length, len(cell_value))
+        ws.column_dimensions[column_letter].width = min(max(max_length + 2, 12), 40)
+
+
+def _style_sheet_header(ws) -> None:
+    header_fill = PatternFill(fill_type="solid", fgColor="5F84B8")
+    header_font = Font(color="FFFFFF", bold=True)
+    border = Border(
+        left=Side(style="thin", color="D6E2F3"),
+        right=Side(style="thin", color="D6E2F3"),
+        top=Side(style="thin", color="D6E2F3"),
+        bottom=Side(style="thin", color="D6E2F3"),
+    )
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = border
+
+
+def _add_excel_table(ws, table_name: str, end_row: int, end_col: int) -> None:
+    if end_row <= 1 or end_col <= 0:
+        return
+    ref = f"A1:{get_column_letter(end_col)}{end_row}"
+    table = Table(displayName=table_name, ref=ref)
+    table.tableStyleInfo = TableStyleInfo(
+        name="TableStyleMedium2",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False,
+    )
+    ws.add_table(table)
+
+
+def _format_details_sheet(ws) -> None:
+    ws.freeze_panes = "A2"
+    _style_sheet_header(ws)
+    _add_excel_table(ws, f"{CAMPUS}_StrugglingDetails".replace("-", "_"), ws.max_row, ws.max_column)
+    for row in ws.iter_rows(min_row=2):
+        for cell in row:
+            cell.alignment = Alignment(vertical="top")
+    _autofit_columns(ws)
+
+
+def _format_summary_sheet(ws) -> None:
+    ws.freeze_panes = "A2"
+    _style_sheet_header(ws)
+
+    total_row = None
+    for row_index in range(2, ws.max_row + 1):
+        first_value = ws.cell(row=row_index, column=1).value
+        if str(first_value).strip().upper() == "TOTAL":
+            total_row = row_index
+            break
+
+    table_end_row = total_row - 1 if total_row and total_row > 2 else ws.max_row
+    if table_end_row >= 2:
+        _add_excel_table(ws, f"{CAMPUS}_StrugglingSummary".replace("-", "_"), table_end_row, ws.max_column)
+
+    total_fill = PatternFill(fill_type="solid", fgColor="1F3A5F")
+    total_font = Font(color="FFFFFF", bold=True)
+    total_border = Border(top=Side(style="thick", color="9EB6D8"))
+    if total_row:
+        for cell in ws[total_row]:
+            cell.fill = total_fill
+            cell.font = total_font
+            cell.border = total_border
+            cell.alignment = Alignment(horizontal="center" if cell.column != 1 else "left", vertical="center")
+
+    for row in ws.iter_rows(min_row=2):
+        for cell in row[1:]:
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+    _autofit_columns(ws)
+
+
+def format_struggling_students_workbook(output_path: str) -> bool:
+    try:
+        workbook = openpyxl.load_workbook(output_path)
+    except FileNotFoundError:
+        print(f"ERROR: Struggling students workbook not found for formatting: {output_path}")
+        return False
+    except Exception as exc:
+        print(f"ERROR: Failed to open struggling students workbook '{output_path}': {exc}")
+        return False
+
+    if "Details" not in workbook.sheetnames or "Summary" not in workbook.sheetnames:
+        print(f"ERROR: Expected 'Details' and 'Summary' sheets in '{output_path}'")
+        return False
+
+    _format_details_sheet(workbook["Details"])
+    _format_summary_sheet(workbook["Summary"])
+
+    try:
+        workbook.save(output_path)
+    except Exception as exc:
+        print(f"ERROR: Failed to save formatted struggling students workbook '{output_path}': {exc}")
+        return False
+    return True
+
+
 def export_struggling_students_to_excel(df_struggling_students, campus):
     if not PRINT_REPORT:
         return True
@@ -2786,17 +3157,10 @@ def export_struggling_students_to_excel(df_struggling_students, campus):
         print("No struggling students to export.")
         return True
 
-    if campus == "VAU":
-        grades_dir = os.path.join(VAU_REPORT_DIRECTORY, 'VAU_StrugglingStudents-')
-    elif campus == "MAE":
-        grades_dir = os.path.join(MAE_REPORT_DIRECTORY, 'MAE_StrugglingStudents-')
-    else:
+    output_path = get_struggling_students_output_path(campus)
+    if not output_path:
         print(f"ERROR: Invalid campus name '{campus}'")
         return False
-
-    today = datetime.now()
-    date_string = today.strftime("%B %d, %Y")
-    output_path = grades_dir + date_string + ".xlsx"
 
     df_filtered = df_struggling_students[pd.to_numeric(df_struggling_students['Final Grade'], errors='coerce') < GRADES_MIN_BAR]
     if df_filtered.empty:
@@ -2811,6 +3175,8 @@ def export_struggling_students_to_excel(df_struggling_students, campus):
     try:
         df_filtered.to_excel(output_path, sheet_name='Details', index=False)
         SummaryOfStrugglingStudents(output_path)
+        if not format_struggling_students_workbook(output_path):
+            return False
         print(f"{campus}_StrugglingStudents exported to {output_path}")
     except Exception as exc:
         print(f"ERROR: Failed to export struggling students report '{output_path}': {exc}")
@@ -3007,37 +3373,14 @@ def SummaryOfStrugglingStudents(output_path):
         warn_once("WARNING", "Campus not set before generating struggling student summary")
         return pd.DataFrame()
 
-    df_student_map = load_student_map(CAMPUS)
-    if df_student_map.empty:
+    result_with_summary = _build_struggling_summary(CAMPUS)
+    if result_with_summary.empty:
         return pd.DataFrame()
-
-    required_cols = {'Teacher Full Name', 'Final Grade'}
-    missing_cols = [col for col in required_cols if col not in df_student_map.columns]
-    if missing_cols:
-        warn_once("WARNING", f"Missing columns {missing_cols} in student map; unable to build summary")
-        return pd.DataFrame()
-
-    df_student_map['Final Grade'] = pd.to_numeric(df_student_map['Final Grade'], errors='coerce').fillna(0)
-
-    try:
-        result = df_student_map.groupby('Teacher Full Name').apply(
-            calculate_ranges,
-            include_groups=False,
-        ).reset_index()
-    except Exception as exc:
-        print(f"ERROR: Failed to aggregate struggling student summary: {exc}")
-        return pd.DataFrame()
-
-    result_sorted = result.sort_values(by='Total Students', ascending=False) if 'Total Students' in result.columns else result
-    blank_row = pd.DataFrame('', index=[0], columns=result_sorted.columns)
-    totals = result_sorted.sum(numeric_only=True)
-    totals_df = pd.DataFrame([["TOTAL"] + totals.tolist()], columns=result_sorted.columns)
-    result_with_summary = pd.concat([result_sorted, blank_row, totals_df], ignore_index=True)
 
     print(result_with_summary.to_string(index=False))
 
     try:
-        with pd.ExcelWriter(output_path, engine='openpyxl', mode='a') as writer:
+        with pd.ExcelWriter(output_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
             result_with_summary.to_excel(writer, sheet_name='Summary', index=False)
     except FileNotFoundError:
         print(f"WARNING: Output file not found for summary append: {output_path}")
@@ -3046,6 +3389,128 @@ def SummaryOfStrugglingStudents(output_path):
 
     print("End - SummaryOfStrugglingStudents")
     return result_with_summary
+
+
+def load_principal_summary_table(output_path: str) -> TableData | None:
+    try:
+        workbook = openpyxl.load_workbook(output_path, data_only=True)
+    except FileNotFoundError:
+        print(f"ERROR: Struggling students workbook not found: {output_path}")
+        return None
+    except Exception as exc:
+        print(f"ERROR: Failed to open struggling students workbook '{output_path}': {exc}")
+        return None
+
+    if "Summary" not in workbook.sheetnames:
+        print(f"ERROR: Summary sheet not found in '{output_path}'")
+        return None
+
+    worksheet = workbook["Summary"]
+    values = list(worksheet.values)
+    if not values:
+        print(f"ERROR: Summary sheet is empty in '{output_path}'")
+        return None
+
+    columns = [str(value).strip() if value is not None else "" for value in values[0]]
+    rows = []
+    for raw_row in values[1:]:
+        row = {
+            columns[index]: ("" if index >= len(raw_row) or raw_row[index] is None else raw_row[index])
+            for index in range(len(columns))
+        }
+        if not any(str(value).strip() for value in row.values()):
+            continue
+        rows.append(row)
+
+    if not rows:
+        print(f"ERROR: Summary sheet does not contain data rows in '{output_path}'")
+        return None
+
+    teacher_col = "Teacher Full Name"
+    total_col = "Total Students"
+    filtered_rows: list[dict[str, object]] = []
+    total_row: dict[str, object] | None = None
+    for row in rows:
+        teacher = str(row.get(teacher_col, "")).strip()
+        if teacher.upper() == "TOTAL":
+            total_row = row
+            continue
+        total_students = pd.to_numeric(row.get(total_col, 0), errors='coerce')
+        if pd.isna(total_students) or int(total_students) <= 0:
+            continue
+        filtered_rows.append(row)
+
+    filtered_rows.sort(
+        key=lambda row: (
+            -int(pd.to_numeric(row.get(total_col, 0), errors='coerce') or 0),
+            str(row.get(teacher_col, "")).strip().lower(),
+        )
+    )
+    if total_row is not None:
+        filtered_rows.append(total_row)
+
+    if not filtered_rows:
+        return None
+
+    return TableData(columns, filtered_rows)
+
+
+def send_principal_struggling_summary(campus: str) -> bool:
+    campus_code = campus.upper() if isinstance(campus, str) else campus
+    output_path = get_struggling_students_output_path(campus_code)
+    if not output_path:
+        print(f"ERROR: Invalid campus name '{campus_code}'")
+        return False
+
+    if not os.path.exists(output_path):
+        df_struggling_students = FindStrugglingStudents(campus_code)
+        if df_struggling_students is None or df_struggling_students.empty:
+            print("No principal summary needed - no struggling students were found.")
+            return True
+        print(f"ERROR: Expected struggling students attachment not found: {output_path}")
+        return False
+
+    summary_table = load_principal_summary_table(output_path)
+    if summary_table is None or summary_table.is_empty:
+        print(f"ERROR: Unable to load principal summary table from '{output_path}'")
+        return False
+
+    if TESTING:
+        recipient_to = to_email
+        recipient_cc = ""
+    else:
+        if not principal_to_email:
+            warn_once(
+                "WARNING",
+                f"Principal recipient email is not configured for campus {campus_code}; production principal summary blocked",
+            )
+            return False
+        recipient_to = principal_to_email
+        recipient_cc = principal_cc_email or ""
+
+    principal_display_name = principal_name or ("Principal" if not TESTING else "Office")
+    subject = f"{campus_code} Students Need Attention"
+    table_html = render_html_table(summary_table)
+    body_email = (
+        f"Hi {principal_display_name},<br><br>"
+        "Please see the attached spreadsheet and the following summary table.<br><br>"
+        "Can you please meet with these teachers individually so we can support these students and retain them for our campus?<br><br>"
+        f"{table_html}<br><br>"
+        "Sincerely,<br>"
+        "Ramzan Khuwaja"
+    )
+
+    print(
+        f"Preparing principal summary email for {campus_code} "
+        f"-> To: {recipient_to}; CC: {recipient_cc or '(none)'}; Attachment: {output_path}"
+    )
+    return send_email_message(
+        recipient_to,
+        recipient_cc,
+        subject,
+        body_email,
+        attachments=[output_path],
+    )
 
 
 def calculate_ranges(group):

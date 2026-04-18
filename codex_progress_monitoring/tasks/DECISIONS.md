@@ -17,8 +17,14 @@
 
 - Manual execution of the existing MAE and VAU entry scripts remains a supported operating mode.
 - Any future automation layer should orchestrate the existing campus scripts/shared code rather than replace the current pipeline logic wholesale.
+- Unless explicitly requested otherwise, workflow and presentation changes should be implemented consistently for both VAU and MAE.
 - Outlook must never be started automatically by project automation; email-capable steps may run only when the operator has opened Outlook manually.
 - Email-capable workflow steps should support a test-send phase before any approved live send to teachers or other stakeholders.
+- Production principal-summary emails use confirmed campus-specific recipients:
+  - VAU: To Angela Armstrong (`aarmstrong@spiritofmath.com`), CC `vaughan@spiritofmath.com`
+  - MAE: To Lisa Chiu (`lisachiu@spiritofmath.com`), CC `markhameast@spiritofmath.com`
+- On `start session`, the assistant should brief Ramzan on status and then wait for explicit direction before doing substantive project work.
+- When starting a campus pipeline, the assistant should first run `*_0_CheckDownloadedFiles`; only after that check should it ask which `THIS_WEEK_NUM` value to use for the remaining pipeline steps.
 
 ## Git
 

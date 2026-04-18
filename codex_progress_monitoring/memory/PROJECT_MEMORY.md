@@ -9,16 +9,22 @@
 - Core shared logic lives in `Common/my_utils.py`.
 - Campus entry scripts live in `MAE/` and `VAU/`.
 - Manual execution of the existing campus scripts must remain supported for both MAE and VAU.
+- Unless Ramzan explicitly says otherwise, behavior, presentation, and workflow changes should be applied consistently to both campuses.
 - Raw Brightspace exports are stored in `Data/<Campus>/{Attendance,ClassList,Grades}`.
 - Debugging fixtures live in `Data/Debugging/<Campus>/...`.
 - Final Excel deliverables are stored in `Ready For Printing/<Campus>/`.
 - Legacy Selenium IDE download artifacts live in `old-scripts/`.
 - This project was moved into `CodexProjects` on April 17, 2026 and now uses template-style `AGENTS.md`, `memory/`, and `tasks/` files while keeping the existing code layout intact.
 - Outlook must never be started automatically by the automation; the operator opens it manually when email-capable steps need to run.
+- Production principal-summary recipients are campus-specific:
+  - VAU principal: Angela Armstrong (`aarmstrong@spiritofmath.com`), CC `vaughan@spiritofmath.com`
+  - MAE principal: Lisa Chiu (`lisachiu@spiritofmath.com`), CC `markhameast@spiritofmath.com`
 
 ## Workflow Pattern
 
 - Start with `projectplan.md`, then confirm current status in `tasks/TASKS.md`.
+- On `start session`, give Ramzan a brief status handoff first, then stop and ask what to do next before starting substantive work.
+- When Ramzan asks to run a campus pipeline, first run `*_0_CheckDownloadedFiles`; after that check completes, ask which week number to use for `THIS_WEEK_NUM` in `Common/my_utils.py` before running the rest of the pipeline.
 - Run duplicate and download checks before rebuilding student maps or generating reports.
 - Keep `TESTING`, `SEND_EMAIL`, and related toggles under control before running any script that can notify staff.
 - Planned automation should orchestrate the existing campus steps one at a time, inspect outcomes before proceeding, stop on key errors, and use a test-send pass before any approved live send.

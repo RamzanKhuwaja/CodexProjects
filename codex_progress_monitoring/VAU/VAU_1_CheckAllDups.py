@@ -449,8 +449,7 @@ def main() -> bool:
     execution_ok = True
     had_findings = False
     duplicate_alerts: list[tuple[str, str]] = []
-    combined_duplicates: list[pd.DataFrame] = []
-    diagnosis_notes: list[str] = []
+    actionable_duplicates = None
 
     total_checks = len(CHECKS)
 
@@ -508,48 +507,25 @@ def main() -> bool:
             )
             for message in diagnosis:
                 print(f"    NOTE: {message}")
-                diagnosis_notes.append(f"{dataset_label}: {message}")
-
-            prepared = prepare_duplicate_rows(dataset_label, duplicates_df)
-            if not prepared.empty:
-                combined_duplicates.append(prepared)
+            if name == f"{CAMPUS} DupStudentsInBSViaClassList":
+                actionable_duplicates = duplicates_df
 
     if duplicate_alerts:
-        details_parts: list[str] = []
-        combined_df = pd.concat(combined_duplicates, ignore_index=True).drop_duplicates() if combined_duplicates else pd.DataFrame()
-
-        if not combined_df.empty:
-            summary_series = combined_df.groupby("Source")["Student ID"].nunique()
-            summary_text = ", ".join(f"{label}: {count}" for label, count in summary_series.items())
-            details_parts.append(f"<p><strong>Summary by source:</strong> {summary_text}</p>")
-
-            table_html = utils.render_html_table(
-                combined_df,
-                subtitle='Combined duplicates across ClassList, Attendance, and Grades.',
+        subject, intro_html, details_html = utils.build_office_duplicate_email(CAMPUS, actionable_duplicates)
+        if details_html:
+            notification_sent = utils.send_duplicate_notification(
+                subject=subject or f'{CAMPUS} Brightspace enrollments to review',
+                intro_html=intro_html or "",
+                details_html=details_html,
+                closing_html='Sincerely, <br>Ramzan Khuwaja',
             )
-            if table_html:
-                details_parts.append(table_html)
-
-        if diagnosis_notes:
-            list_items = ''.join(f"<li>{note}</li>" for note in diagnosis_notes)
-            details_parts.append(f"<p>Suggested actions:</p><ul>{list_items}</ul>")
-
-        if not details_parts:
-            list_items = ''.join(f'<li>{check_name} - {target}</li>' for check_name, target in duplicate_alerts)
-            details_parts.append(f'<ul>{list_items}</ul>')
-
-        notification_sent = utils.send_duplicate_notification(
-            subject=f'{CAMPUS} Brightspace duplicates detected',
-            intro_html=(
-                'Hello Office, <br><br>'
-                'The following Brightspace students appear more than once. '
-                'Please remove the duplicates when convenient.'
-            ),
-            details_html=''.join(details_parts),
-            closing_html='Sincerely, <br>Ramzan Khuwaja',
-        )
-        if not notification_sent:
-            print("WARNING: Duplicate notification email was not sent.")
+            if not notification_sent:
+                print("WARNING: Duplicate notification email was not sent.")
+        else:
+            print(
+                "INFO: Duplicate findings were detected, but none were suitable "
+                "for an office action email."
+            )
 
     print("\nAll checks complete.")
     print("=" * 56)

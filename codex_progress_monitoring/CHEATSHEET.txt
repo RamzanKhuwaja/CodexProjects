@@ -36,14 +36,22 @@ SCRIPTS
   Generate reports:
     python MAE/MAE_3_AttendanceMissing.py
     python MAE/MAE_4_StrugglingStudents.py
+    python MAE/MAE_4_5_PrincipalSummary.py
     python MAE/MAE_5_RemindForBSLogin.py
     python MAE/MAE_6_HighHonoursStudents.py
     python MAE/MAE_7_NeedsToAttendMoreRegularly.py
     python VAU/VAU_3_AttendanceMissing.py
     python VAU/VAU_4_StrugglingStudents.py
+    python VAU/VAU_4_5_PrincipalSummary.py
     python VAU/VAU_5_RemindForBSLogin.py
     python VAU/VAU_6_HighHonoursStudents.py
     python VAU/VAU_7_NeedsToAttendMoreRegularly.py
+
+  Supervised runner:
+    python -m Common.supervised_runner --campus VAU --flow start --mode silent-test
+    python -m Common.supervised_runner --campus VAU --flow main --mode test-send --week 29
+    python -m Common.supervised_runner --campus VAU --step 4_5 --mode test-send --week 29
+    python -m Common.supervised_runner --campus MAE --flow start --mode silent-test
 
 ------------------------------------------------------------
 DATA LAYOUT
@@ -75,6 +83,7 @@ NOTES
 ------------------------------------------------------------
 
   - Run scripts from the project root.
+  - When running a campus pipeline conversationally, step `*_0_CheckDownloadedFiles` runs first; choose the week number only after that step passes.
   - Outlook COM automation requires Windows Outlook to be configured.
   - pdfkit requires wkhtmltopdf to be installed locally.
   - Reports continue to write to Ready For Printing/, not output/.
