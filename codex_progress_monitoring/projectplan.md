@@ -95,6 +95,14 @@
 ## Session Journal
 _Add a new entry per session (reverse chronological)._
 
+### 2026-04-20 — VAU Pipeline Validation And Live Send
+- Ran the supervised VAU pipeline on fresh April 20, 2026 exports after confirming the missing Grade 8 grades export for class `SOMp2508Su1130ETVAU` (`ou=25497`) had been downloaded.
+- Completed `start` successfully, then ran the `main` flow for week 30 in `test-send` mode and confirmed the attendance-missing, struggling-students, and principal-summary emails all sent correctly once Outlook was open.
+- Re-ran the VAU `main` flow in `production` mode with explicit live-send confirmation so the duplicate-removal office email, teacher-facing emails, and principal summary were all sent to live recipients.
+- Confirmed the current VAU run still reports duplicate-export clutter in 11 class buckets and a cross-class student duplicate for Felix Li.
+- Confirmed `GenerateStudentMap` completed and refreshed `Common/VAUStudentMap2025-26.csv`, while still warning that `Attendance (%)` is missing for five students.
+- Recorded a follow-up reminder to confirm which grade column is being used before relying on grade-based outputs in future sessions.
+
 ### 2026-04-17 — Validation And Automation Design Capture
 - Verified the moved workspace path by running `VAU_1_CheckAllDups.py` and `MAE_1_CheckAllDups.py` successfully from the project root.
 - Confirmed current exports on disk are recent enough for validation work: VAU data dated March 29, 2026 and MAE data dated April 14, 2026.
@@ -110,9 +118,9 @@ _Add a new entry per session (reverse chronological)._
 
 ## Next Session Checklist
 - Read the latest Session Journal entry.
-- Draft the supervised runner design and explicit halt/continue rules for each campus step.
-- Decide how runtime controls will replace hand-edited globals such as `TESTING`, `SEND_EMAIL`, and `PRINT_REPORT`.
-- Check for new data exports in `Data/<Campus>/` directories and clean duplicate downloads before any live pipeline run.
+- Confirm which Brightspace/student-grade column is currently being used before relying on grade-driven outputs.
+- Review the VAU duplicate-export clutter and decide whether to clean older downloads before the next live run.
+- Run an MAE test-send pass for the shared principal-summary step so both campuses are confirmed under the new flow.
 - Confirm Outlook is already open before any email-capable test or live send.
 - After each work session, append a new entry under "Session Journal" and refresh the checklist so the next pickup is seamless.
 

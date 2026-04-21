@@ -27,6 +27,7 @@
 - When Ramzan asks to run a campus pipeline, first run `*_0_CheckDownloadedFiles`; after that check completes, ask which week number to use for `THIS_WEEK_NUM` in `Common/my_utils.py` before running the rest of the pipeline.
 - Run duplicate and download checks before rebuilding student maps or generating reports.
 - Keep `TESTING`, `SEND_EMAIL`, and related toggles under control before running any script that can notify staff.
+- Before relying on grade-based outputs in a new session, confirm with Ramzan which Brightspace/student-grade column the pipeline is currently using.
 - Planned automation should orchestrate the existing campus steps one at a time, inspect outcomes before proceeding, stop on key errors, and use a test-send pass before any approved live send.
 
 ## Known Risks Or Recurring Flags
