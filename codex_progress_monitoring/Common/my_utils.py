@@ -227,6 +227,7 @@ GRADES_MIN_BAR = int(50) # Scoring less than 50%!
 HIGH_HONOURS_MIN_BAR = int(90) # Scoring 90% or higher!
 NOT_LOGGED_IN_SINCE = int(14) # Not logged in since last 2 weeks!
 ATTENDANCE_MIN_BAR = int(80) # Min attendance required (in %)
+K4_ACTIVITY_WATCH_BAR = int(70)
 
 CAMPUS = to_email = cc_email = body_email = subject_email = ""
 principal_name = principal_to_email = principal_cc_email = ""
@@ -247,6 +248,10 @@ _WARNED_MESSAGES: set[tuple[str, str]] = set()
 _OUTLOOK_APP = None
 _OUTLOOK_CONNECTION_FAILED = False
 _RUNTIME_OPTION_STACK: list[RuntimeOptions] = []
+
+K4_STUDENT_ACTIVITY_SHEET = "K4_Student_Activity_Details"
+K4_CLASS_ACTIVITY_SHEET = "K4_Class_Activity_Summary"
+K4_CAMPUS_ACTIVITY_SHEET = "K4_Campus_Activity_Summary"
 
 
 def warn_once(level: str, message: str) -> None:
@@ -1626,6 +1631,377 @@ def calculate_final_grade(row: pd.Series) -> int:
     return final_grade
 
 
+def _extract_grade_band_from_filename(filename: str) -> str:
+    match = re.search(r"Grade\s+(K|[0-9]{1,2})", os.path.basename(str(filename)), re.IGNORECASE)
+    if not match:
+        return ""
+    return f"Grade {match.group(1).upper()}"
+
+
+def _is_k4_grade_band(grade_band: str) -> bool:
+    if not grade_band:
+        return False
+    normalized = str(grade_band).strip().lower()
+    return normalized in {"grade k", "grade 1", "grade 2", "grade 3", "grade 4"}
+
+
+def _get_campus_grades_dir(campus: str) -> str | None:
+    campus_code = str(campus).strip().upper()
+    if campus_code == "VAU":
+        return VAU_GRADES_DIR
+    if campus_code == "MAE":
+        return MAE_GRADES_DIR
+    return None
+
+
+def _normalise_k4_activity_bucket(raw_activity: str) -> tuple[str, bool]:
+    name = normalize(raw_activity)
+    if not name:
+        return "Other Core", False
+
+    if any(keyword in name for keyword in ("external contest", "contest", "caribou", "kangaroo", "mathematica", "cnml", "wmo", "cemc", "amc", "comc")):
+        return "Optional / Excluded", True
+    if "probation" in name or "withdrawn" in name:
+        return "Optional / Excluded", True
+    if "year-end assessment" in name:
+        return "Tests / Assessments", False
+    if "participation" in name or "cooperation" in name:
+        return "Participation", False
+    if "mini" in name or "project" in name:
+        return "Mini / Projects", False
+    if "homework" in name or "independent assignment" in name:
+        return "Homework / Assignments", False
+    if "assignment" in name and "test" in name:
+        return "Assignments / Tests", False
+    if "assignment" in name:
+        return "Homework / Assignments", False
+    if "test" in name or "exam" in name or "assessment" in name:
+        return "Tests / Assessments", False
+    if any(
+        keyword in name
+        for keyword in (
+            "drill",
+            "regrouping",
+            "skip counting",
+            "sum fun",
+            "super speed",
+            "times square",
+            "divide and conquer",
+            "perfect squares",
+            "decimal equivalents",
+            "long multiplication",
+            "long division",
+            "more or less",
+        )
+    ):
+        return "Drills", False
+    return "Other Core", False
+
+
+def _classify_k4_activity_status(activity_percent: object) -> str:
+    percent = pd.to_numeric(activity_percent, errors='coerce')
+    if pd.isna(percent):
+        return ""
+    if float(percent) < GRADES_MIN_BAR:
+        return "Critical"
+    if float(percent) < K4_ACTIVITY_WATCH_BAR:
+        return "Watch"
+    return "Healthy"
+
+
+def _find_k4_subtotal_pairs(columns: Sequence[str]) -> list[tuple[str, str, str]]:
+    pairs: list[tuple[str, str, str]] = []
+    column_lookup = {str(col): str(col) for col in columns}
+    for column in columns:
+        column_name = str(column)
+        if not column_name.endswith("Subtotal Numerator"):
+            continue
+        activity_name = column_name[: -len("Subtotal Numerator")].strip()
+        denominator_col = f"{activity_name} Subtotal Denominator"
+        if denominator_col not in column_lookup:
+            continue
+        pairs.append((activity_name, column_name, denominator_col))
+    return pairs
+
+
+def _build_k4_activity_details_from_export(
+    filename: str,
+    frame: pd.DataFrame,
+    org_ids: pd.Series,
+    class_code: str,
+    grade_band: str,
+) -> pd.DataFrame:
+    columns = [
+        "Org Defined ID",
+        "Class Code",
+        "Grade Band",
+        "Activity",
+        "Student Earned",
+        "Possible",
+        "Activity %",
+        "Status",
+        "Notes",
+    ]
+    subtotal_pairs = _find_k4_subtotal_pairs(frame.columns)
+    if not subtotal_pairs:
+        warn_once("WARNING", f"No subtotal activity columns found in K-4 grades export '{filename}'")
+        return pd.DataFrame(columns=columns)
+
+    rows: list[dict[str, object]] = []
+    for row_index, student_id in org_ids.items():
+        aggregate: dict[str, dict[str, float]] = {}
+        excluded_categories: list[str] = []
+        row = frame.loc[row_index]
+        for raw_activity, numerator_col, denominator_col in subtotal_pairs:
+            activity_name, is_excluded = _normalise_k4_activity_bucket(raw_activity)
+            if is_excluded:
+                excluded_categories.append(raw_activity)
+                continue
+
+            earned = pd.to_numeric(row.get(numerator_col), errors='coerce')
+            possible = pd.to_numeric(row.get(denominator_col), errors='coerce')
+            if pd.isna(possible) or float(possible) <= 0:
+                continue
+
+            activity_bucket = aggregate.setdefault(activity_name, {"earned": 0.0, "possible": 0.0})
+            activity_bucket["earned"] += 0.0 if pd.isna(earned) else float(earned)
+            activity_bucket["possible"] += float(possible)
+
+        notes = ""
+        if excluded_categories:
+            notes = f"Excluded optional categories: {', '.join(sorted(set(excluded_categories)))}"
+
+        for activity_name, totals in aggregate.items():
+            possible = totals["possible"]
+            if possible <= 0:
+                continue
+            earned = totals["earned"]
+            activity_percent = round(100 * earned / possible, 1)
+            rows.append(
+                {
+                    "Org Defined ID": str(student_id).strip(),
+                    "Class Code": class_code,
+                    "Grade Band": grade_band,
+                    "Activity": activity_name,
+                    "Student Earned": round(earned, 2),
+                    "Possible": round(possible, 2),
+                    "Activity %": activity_percent,
+                    "Status": _classify_k4_activity_status(activity_percent),
+                    "Notes": notes,
+                }
+            )
+
+    return pd.DataFrame(rows, columns=columns) if rows else pd.DataFrame(columns=columns)
+
+
+def _rank_k4_activity_details(details: pd.DataFrame) -> pd.DataFrame:
+    if details is None or details.empty:
+        return pd.DataFrame(columns=[
+            "Teacher Full Name",
+            "Teacher Email",
+            "Class Code",
+            "Grade Band",
+            "Student Full Name",
+            "Org Defined ID",
+            "Overall Final Grade %",
+            "Activity",
+            "Student Earned",
+            "Possible",
+            "Activity %",
+            "Status",
+            "Priority Rank",
+            "Notes",
+        ])
+
+    ordered = details.copy()
+    ordered["Activity %"] = pd.to_numeric(ordered["Activity %"], errors="coerce")
+    ordered["Overall Final Grade %"] = pd.to_numeric(ordered["Overall Final Grade %"], errors="coerce")
+    ordered = ordered.sort_values(
+        by=["Teacher Full Name", "Class Code", "Student Full Name", "Activity %", "Activity"],
+        ascending=[True, True, True, True, True],
+    ).reset_index(drop=True)
+    ordered["Priority Rank"] = (
+        ordered.groupby(["Class Code", "Org Defined ID"]).cumcount() + 1
+    )
+    return ordered
+
+
+def summarize_k4_student_concerns(
+    df_students: pd.DataFrame | None,
+    k4_details: pd.DataFrame | None,
+) -> pd.DataFrame:
+    columns = [
+        "Class Code",
+        "Org Defined ID",
+        "Grade Band",
+        "Primary Concern Area",
+        "Primary Concern %",
+        "Secondary Concern Area",
+        "Secondary Concern %",
+        "Concern Count",
+    ]
+    if df_students is None or df_students.empty or k4_details is None or k4_details.empty:
+        return pd.DataFrame(columns=columns)
+
+    ranked = _rank_k4_activity_details(k4_details)
+    if ranked.empty:
+        return pd.DataFrame(columns=columns)
+
+    rows: list[dict[str, object]] = []
+    for (_, _), group in ranked.groupby(["Class Code", "Org Defined ID"], sort=False):
+        group = group.sort_values(by=["Priority Rank", "Activity"], ascending=[True, True])
+        first = group.iloc[0] if len(group) >= 1 else None
+        second = group.iloc[1] if len(group) >= 2 else None
+        concern_count = int(group["Status"].isin(["Critical", "Watch"]).sum())
+        rows.append(
+            {
+                "Class Code": group["Class Code"].iloc[0],
+                "Org Defined ID": group["Org Defined ID"].iloc[0],
+                "Grade Band": group["Grade Band"].iloc[0],
+                "Primary Concern Area": "" if first is None else first["Activity"],
+                "Primary Concern %": "" if first is None else first["Activity %"],
+                "Secondary Concern Area": "" if second is None else second["Activity"],
+                "Secondary Concern %": "" if second is None else second["Activity %"],
+                "Concern Count": concern_count,
+            }
+        )
+
+    result = pd.DataFrame(rows, columns=columns)
+    result["Org Defined ID"] = result["Org Defined ID"].astype(str)
+    result["Class Code"] = result["Class Code"].astype(str)
+    return result
+
+
+def build_k4_activity_details(
+    campus: str,
+    df_students: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    columns = [
+        "Teacher Full Name",
+        "Teacher Email",
+        "Class Code",
+        "Grade Band",
+        "Student Full Name",
+        "Org Defined ID",
+        "Overall Final Grade %",
+        "Activity",
+        "Student Earned",
+        "Possible",
+        "Activity %",
+        "Status",
+        "Notes",
+    ]
+    grades_dir = _get_campus_grades_dir(campus)
+    if not grades_dir or not os.path.exists(grades_dir):
+        return pd.DataFrame(columns=columns)
+
+    if df_students is None or df_students.empty:
+        df_students = load_student_map(campus)
+    if df_students is None or df_students.empty:
+        return pd.DataFrame(columns=columns)
+
+    roster_source = load_student_map(campus)
+    class_rosters = _build_class_rosters(roster_source if roster_source is not None else df_students)
+
+    keys = {
+        (str(row["Class Code"]).strip(), str(row["Org Defined ID"]).strip())
+        for _, row in df_students.iterrows()
+        if str(row.get("Class Code", "")).strip() and str(row.get("Org Defined ID", "")).strip()
+    }
+    if not keys:
+        return pd.DataFrame(columns=columns)
+
+    csv_paths = sorted(glob.glob(os.path.join(grades_dir, "*.csv")))
+    if not csv_paths:
+        return pd.DataFrame(columns=columns)
+
+    entries: list[tuple[str, float, pd.DataFrame]] = []
+    for filename in csv_paths:
+        grade_band = _extract_grade_band_from_filename(filename)
+        if not _is_k4_grade_band(grade_band):
+            continue
+
+        try:
+            df = pd.read_csv(filename)
+        except Exception as exc:
+            print(f"WARNING: Unable to read K-4 grades file '{filename}': {exc}")
+            continue
+
+        if df.empty:
+            continue
+
+        id_col = find_first_matching_column(df, ("orgdefinedid", "org defined id", "student id", "org-defined-id"))
+        if id_col is None:
+            continue
+
+        username_col = find_first_matching_column(df, ("username", "user name", "email"))
+
+        def compute_student_id(row):
+            fallback = row[username_col] if username_col else None
+            return extract_student_id(row[id_col], fallback)
+
+        org_ids = df.apply(compute_student_id, axis=1)
+        valid_mask = org_ids.notna()
+        if not valid_mask.any():
+            continue
+
+        filtered = df.loc[valid_mask]
+        org_ids = org_ids.loc[valid_mask].astype(str)
+        student_ids = {student_id.strip() for student_id in org_ids.astype(str) if student_id.strip()}
+        class_code = _infer_class_code_from_student_ids(student_ids, class_rosters, os.path.basename(filename))
+        if class_code is None:
+            continue
+
+        detail_frame = _build_k4_activity_details_from_export(filename, filtered, org_ids, class_code, grade_band)
+        if detail_frame.empty:
+            continue
+        detail_frame.attrs["source_file"] = filename
+        entries.append((class_code, os.path.getmtime(filename), detail_frame))
+
+    if not entries:
+        return pd.DataFrame(columns=columns)
+
+    frames = _select_latest_class_exports(entries, "K-4 activity detail")
+    details = pd.concat(frames, ignore_index=True)
+    if details.empty:
+        return pd.DataFrame(columns=columns)
+
+    details["Class Code"] = details["Class Code"].astype(str)
+    details["Org Defined ID"] = details["Org Defined ID"].astype(str)
+    details = details[
+        details.apply(
+            lambda row: (str(row["Class Code"]).strip(), str(row["Org Defined ID"]).strip()) in keys,
+            axis=1,
+        )
+    ].copy()
+    if details.empty:
+        return pd.DataFrame(columns=columns)
+
+    student_lookup_cols = [
+        "Class Code",
+        "Org Defined ID",
+        "Teacher Full Name",
+        "Teacher Email",
+        "Student Full Name",
+        "Final Grade",
+    ]
+    available_cols = [col for col in student_lookup_cols if col in df_students.columns]
+    lookup = df_students[available_cols].copy().drop_duplicates(["Class Code", "Org Defined ID"])
+    lookup["Class Code"] = lookup["Class Code"].astype(str)
+    lookup["Org Defined ID"] = lookup["Org Defined ID"].astype(str)
+
+    merged = details.merge(lookup, on=["Class Code", "Org Defined ID"], how="left")
+    merged = merged.rename(columns={"Final Grade": "Overall Final Grade %"})
+    for col in columns:
+        if col not in merged.columns:
+            merged[col] = ""
+
+    merged = merged[columns].copy()
+    merged["Overall Final Grade %"] = pd.to_numeric(merged["Overall Final Grade %"], errors="coerce")
+    merged["Activity %"] = pd.to_numeric(merged["Activity %"], errors="coerce")
+    return _rank_k4_activity_details(merged)
+
+
 
 
 
@@ -2998,6 +3374,214 @@ def FindNeedsToAttendMoreRegularly(campus):
     ]].copy()
 
 
+def enrich_struggling_students_with_k4_concerns(
+    df_struggling_students: pd.DataFrame | None,
+    k4_details: pd.DataFrame | None,
+) -> pd.DataFrame:
+    if df_struggling_students is None or df_struggling_students.empty:
+        return pd.DataFrame()
+
+    result = df_struggling_students.copy()
+    result["Class Code"] = result["Class Code"].astype(str)
+    result["Org Defined ID"] = result["Org Defined ID"].astype(str)
+
+    concern_summary = summarize_k4_student_concerns(result, k4_details)
+    if concern_summary.empty:
+        result["Grade Band"] = ""
+        result["Primary Concern Area"] = ""
+        result["Primary Concern %"] = ""
+        result["Secondary Concern Area"] = ""
+        result["Secondary Concern %"] = ""
+        result["Concern Count"] = ""
+        return result
+
+    result = result.merge(concern_summary, on=["Class Code", "Org Defined ID"], how="left")
+    for col in [
+        "Grade Band",
+        "Primary Concern Area",
+        "Primary Concern %",
+        "Secondary Concern Area",
+        "Secondary Concern %",
+        "Concern Count",
+    ]:
+        if col not in result.columns:
+            result[col] = ""
+        result[col] = result[col].fillna("")
+    return result
+
+
+def build_k4_class_activity_summary(k4_details: pd.DataFrame | None) -> pd.DataFrame:
+    columns = [
+        "Teacher Full Name",
+        "Class Code",
+        "Activity",
+        "Flagged K4 Students",
+        "Students With Activity Concern",
+        "% Of Flagged Students Affected",
+        "Average Activity %",
+        "Lowest Activity %",
+        "Highest Activity %",
+        "Critical Count",
+        "Watch Count",
+        "Most Affected Students",
+    ]
+    if k4_details is None or k4_details.empty:
+        return pd.DataFrame(columns=columns)
+
+    working = k4_details.copy()
+    working["Activity %"] = pd.to_numeric(working["Activity %"], errors="coerce")
+    rows: list[dict[str, object]] = []
+    for (teacher_name, class_code, activity), group in working.groupby(
+        ["Teacher Full Name", "Class Code", "Activity"],
+        sort=False,
+    ):
+        activity_concern = group[group["Status"].isin(["Critical", "Watch"])]
+        flagged_count = int(group["Org Defined ID"].nunique())
+        affected_count = int(activity_concern["Org Defined ID"].nunique())
+        source_rows = activity_concern if not activity_concern.empty else group
+        lowest_rows = source_rows.sort_values(by=["Activity %", "Student Full Name"], ascending=[True, True]).head(3)
+        rows.append(
+            {
+                "Teacher Full Name": teacher_name,
+                "Class Code": class_code,
+                "Activity": activity,
+                "Flagged K4 Students": flagged_count,
+                "Students With Activity Concern": affected_count,
+                "% Of Flagged Students Affected": round((100 * affected_count / flagged_count), 1) if flagged_count else 0.0,
+                "Average Activity %": round(group["Activity %"].mean(), 1) if not group["Activity %"].dropna().empty else np.nan,
+                "Lowest Activity %": round(group["Activity %"].min(), 1) if not group["Activity %"].dropna().empty else np.nan,
+                "Highest Activity %": round(group["Activity %"].max(), 1) if not group["Activity %"].dropna().empty else np.nan,
+                "Critical Count": int((group["Status"] == "Critical").sum()),
+                "Watch Count": int((group["Status"] == "Watch").sum()),
+                "Most Affected Students": ", ".join(lowest_rows["Student Full Name"].astype(str).tolist()),
+            }
+        )
+
+    summary = pd.DataFrame(rows, columns=columns)
+    if summary.empty:
+        return summary
+    return summary.sort_values(
+        by=["Students With Activity Concern", "Average Activity %", "Teacher Full Name", "Class Code", "Activity"],
+        ascending=[False, True, True, True, True],
+    ).reset_index(drop=True)
+
+
+def build_k4_campus_activity_summary(k4_details: pd.DataFrame | None) -> pd.DataFrame:
+    columns = [
+        "Activity",
+        "Flagged K4 Students Affected",
+        "% Of All Flagged K4 Students",
+        "Classes Affected",
+        "Teachers Affected",
+        "Average Activity %",
+        "Critical Count",
+        "Watch Count",
+        "Most Common Concern Rank",
+    ]
+    if k4_details is None or k4_details.empty:
+        return pd.DataFrame(columns=columns)
+
+    working = k4_details.copy()
+    working["Activity %"] = pd.to_numeric(working["Activity %"], errors="coerce")
+    concern_rows = working[working["Status"].isin(["Critical", "Watch"])].copy()
+    flagged_students = int(working["Org Defined ID"].nunique())
+
+    rows: list[dict[str, object]] = []
+    for activity, group in working.groupby("Activity", sort=False):
+        concern_group = concern_rows[concern_rows["Activity"] == activity]
+        affected_students = int(concern_group["Org Defined ID"].nunique())
+        rows.append(
+            {
+                "Activity": activity,
+                "Flagged K4 Students Affected": affected_students,
+                "% Of All Flagged K4 Students": round((100 * affected_students / flagged_students), 1) if flagged_students else 0.0,
+                "Classes Affected": int(concern_group["Class Code"].nunique()),
+                "Teachers Affected": int(concern_group["Teacher Full Name"].nunique()),
+                "Average Activity %": round(group["Activity %"].mean(), 1) if not group["Activity %"].dropna().empty else np.nan,
+                "Critical Count": int((group["Status"] == "Critical").sum()),
+                "Watch Count": int((group["Status"] == "Watch").sum()),
+            }
+        )
+
+    summary = pd.DataFrame(rows)
+    if summary.empty:
+        return pd.DataFrame(columns=columns)
+    summary = summary.sort_values(
+        by=["Flagged K4 Students Affected", "Average Activity %", "Activity"],
+        ascending=[False, True, True],
+    ).reset_index(drop=True)
+    summary["Most Common Concern Rank"] = summary.index + 1
+    return summary[columns]
+
+
+def build_teacher_k4_activity_email_html(
+    df_teacher: pd.DataFrame | None,
+    k4_details: pd.DataFrame | None,
+) -> str:
+    if df_teacher is None or df_teacher.empty or k4_details is None or k4_details.empty:
+        return ""
+
+    teacher_keys = {
+        (str(row["Class Code"]).strip(), str(row["Org Defined ID"]).strip())
+        for _, row in df_teacher.iterrows()
+        if str(row.get("Class Code", "")).strip() and str(row.get("Org Defined ID", "")).strip()
+    }
+    if not teacher_keys:
+        return ""
+
+    teacher_details = k4_details[
+        k4_details.apply(
+            lambda row: (str(row["Class Code"]).strip(), str(row["Org Defined ID"]).strip()) in teacher_keys,
+            axis=1,
+        )
+    ].copy()
+    if teacher_details.empty:
+        return ""
+
+    summary = summarize_k4_student_concerns(df_teacher, teacher_details)
+    summary_lookup = {
+        (str(row["Class Code"]).strip(), str(row["Org Defined ID"]).strip()): row
+        for _, row in summary.iterrows()
+    }
+
+    blocks: list[str] = [
+        "<div style=\"margin-top:18px;\">"
+        "<strong>K-4 activity details</strong><br>"
+        "The activity tables below show which areas are contributing most to each flagged K-4 student's current grade."
+        "</div>"
+    ]
+    for (_, _), group in teacher_details.groupby(["Class Code", "Org Defined ID"], sort=False):
+        group = group.sort_values(by=["Priority Rank", "Activity"], ascending=[True, True])
+        first_row = group.iloc[0]
+        key = (str(first_row["Class Code"]).strip(), str(first_row["Org Defined ID"]).strip())
+        concern_row = summary_lookup.get(key, {})
+        intro = (
+            f"<div style=\"margin-top:16px; margin-bottom:6px;\">"
+            f"<strong>{html.escape(str(first_row['Student Full Name']))}</strong>"
+            f" ({html.escape(str(first_row['Class Code']))})"
+            f" - Overall Grade: {'' if pd.isna(first_row['Overall Final Grade %']) else round(float(first_row['Overall Final Grade %']), 1)}%"
+        )
+        primary = str(concern_row.get("Primary Concern Area", "")).strip()
+        if primary:
+            intro += f"<br>Primary concern: {html.escape(primary)}"
+            primary_pct = pd.to_numeric(concern_row.get("Primary Concern %"), errors="coerce")
+            if not pd.isna(primary_pct):
+                intro += f" ({round(float(primary_pct), 1)}%)"
+        secondary = str(concern_row.get("Secondary Concern Area", "")).strip()
+        if secondary:
+            intro += f"<br>Secondary concern: {html.escape(secondary)}"
+            secondary_pct = pd.to_numeric(concern_row.get("Secondary Concern %"), errors="coerce")
+            if not pd.isna(secondary_pct):
+                intro += f" ({round(float(secondary_pct), 1)}%)"
+        intro += "</div>"
+        blocks.append(intro)
+
+        payload = group[["Activity", "Student Earned", "Possible", "Activity %", "Status"]].copy()
+        blocks.append(render_html_table(payload))
+
+    return "".join(blocks)
+
+
 def get_struggling_students_output_path(campus: str, run_datetime: datetime | None = None) -> str | None:
     campus_code = campus.upper() if isinstance(campus, str) else campus
     if run_datetime is None:
@@ -3090,6 +3674,62 @@ def _format_details_sheet(ws) -> None:
     for row in ws.iter_rows(min_row=2):
         for cell in row:
             cell.alignment = Alignment(vertical="top")
+    _apply_percent_format_to_columns(ws, ["Primary Concern %", "Secondary Concern %"])
+    _autofit_columns(ws)
+
+
+def _apply_percent_format_to_columns(ws, column_names: Sequence[str]) -> None:
+    if ws.max_row < 2:
+        return
+    headers = {str(cell.value).strip(): cell.column for cell in ws[1] if cell.value is not None}
+    for column_name in column_names:
+        column_index = headers.get(column_name)
+        if column_index is None:
+            continue
+        for row_index in range(2, ws.max_row + 1):
+            cell = ws.cell(row=row_index, column=column_index)
+            value = pd.to_numeric(cell.value, errors="coerce")
+            if pd.isna(value):
+                continue
+            cell.value = float(value) / 100
+            cell.number_format = "0.0%"
+
+
+def _apply_k4_status_colors(ws) -> None:
+    headers = {str(cell.value).strip(): cell.column for cell in ws[1] if cell.value is not None}
+    status_col = headers.get("Status")
+    if status_col is None:
+        return
+
+    fills = {
+        "Critical": PatternFill(fill_type="solid", fgColor="FDE2E1"),
+        "Watch": PatternFill(fill_type="solid", fgColor="FFF3CD"),
+        "Healthy": PatternFill(fill_type="solid", fgColor="E2F0D9"),
+    }
+    for row_index in range(2, ws.max_row + 1):
+        cell = ws.cell(row=row_index, column=status_col)
+        status = str(cell.value).strip()
+        if status in fills:
+            cell.fill = fills[status]
+
+
+def _format_generic_sheet(
+    ws,
+    table_name: str,
+    *,
+    percent_columns: Sequence[str] | None = None,
+    status_colors: bool = False,
+) -> None:
+    ws.freeze_panes = "A2"
+    _style_sheet_header(ws)
+    _add_excel_table(ws, table_name, ws.max_row, ws.max_column)
+    for row in ws.iter_rows(min_row=2):
+        for cell in row:
+            cell.alignment = Alignment(vertical="top")
+    if percent_columns:
+        _apply_percent_format_to_columns(ws, percent_columns)
+    if status_colors:
+        _apply_k4_status_colors(ws)
     _autofit_columns(ws)
 
 
@@ -3140,6 +3780,25 @@ def format_struggling_students_workbook(output_path: str) -> bool:
 
     _format_details_sheet(workbook["Details"])
     _format_summary_sheet(workbook["Summary"])
+    if K4_STUDENT_ACTIVITY_SHEET in workbook.sheetnames:
+        _format_generic_sheet(
+            workbook[K4_STUDENT_ACTIVITY_SHEET],
+            f"{CAMPUS}_K4StudentDetails".replace("-", "_"),
+            percent_columns=["Overall Final Grade %", "Activity %"],
+            status_colors=True,
+        )
+    if K4_CLASS_ACTIVITY_SHEET in workbook.sheetnames:
+        _format_generic_sheet(
+            workbook[K4_CLASS_ACTIVITY_SHEET],
+            f"{CAMPUS}_K4ClassSummary".replace("-", "_"),
+            percent_columns=["% Of Flagged Students Affected", "Average Activity %", "Lowest Activity %", "Highest Activity %"],
+        )
+    if K4_CAMPUS_ACTIVITY_SHEET in workbook.sheetnames:
+        _format_generic_sheet(
+            workbook[K4_CAMPUS_ACTIVITY_SHEET],
+            f"{CAMPUS}_K4CampusSummary".replace("-", "_"),
+            percent_columns=["% Of All Flagged K4 Students", "Average Activity %"],
+        )
 
     try:
         workbook.save(output_path)
@@ -3167,6 +3826,8 @@ def export_struggling_students_to_excel(df_struggling_students, campus):
         print("No struggling students below the grade threshold.")
         return True
 
+    k4_details = build_k4_activity_details(campus, df_filtered)
+    df_filtered = enrich_struggling_students_with_k4_concerns(df_filtered, k4_details)
     df_filtered = df_filtered.sort_values(
         by=["Teacher Full Name", "Class Code", "Student Full Name", "Final Grade"],
         ascending=[True, True, True, True]
@@ -3175,6 +3836,15 @@ def export_struggling_students_to_excel(df_struggling_students, campus):
     try:
         df_filtered.to_excel(output_path, sheet_name='Details', index=False)
         SummaryOfStrugglingStudents(output_path)
+        if k4_details is not None and not k4_details.empty:
+            k4_class_summary = build_k4_class_activity_summary(k4_details)
+            k4_campus_summary = build_k4_campus_activity_summary(k4_details)
+            with pd.ExcelWriter(output_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+                k4_details.to_excel(writer, sheet_name=K4_STUDENT_ACTIVITY_SHEET, index=False)
+                if not k4_class_summary.empty:
+                    k4_class_summary.to_excel(writer, sheet_name=K4_CLASS_ACTIVITY_SHEET, index=False)
+                if not k4_campus_summary.empty:
+                    k4_campus_summary.to_excel(writer, sheet_name=K4_CAMPUS_ACTIVITY_SHEET, index=False)
         if not format_struggling_students_workbook(output_path):
             return False
         print(f"{campus}_StrugglingStudents exported to {output_path}")
@@ -3455,6 +4125,17 @@ def load_principal_summary_table(output_path: str) -> TableData | None:
     return TableData(columns, filtered_rows)
 
 
+def struggling_workbook_has_k4_summaries(output_path: str) -> bool:
+    try:
+        workbook = openpyxl.load_workbook(output_path, read_only=True)
+    except Exception:
+        return False
+    try:
+        return any(sheet in workbook.sheetnames for sheet in (K4_STUDENT_ACTIVITY_SHEET, K4_CLASS_ACTIVITY_SHEET, K4_CAMPUS_ACTIVITY_SHEET))
+    finally:
+        workbook.close()
+
+
 def send_principal_struggling_summary(campus: str) -> bool:
     campus_code = campus.upper() if isinstance(campus, str) else campus
     output_path = get_struggling_students_output_path(campus_code)
@@ -3491,9 +4172,15 @@ def send_principal_struggling_summary(campus: str) -> bool:
     principal_display_name = principal_name or ("Principal" if not TESTING else "Office")
     subject = f"{campus_code} Students Need Attention"
     table_html = render_html_table(summary_table)
+    k4_note = ""
+    if struggling_workbook_has_k4_summaries(output_path):
+        k4_note = (
+            "The attachment also includes K-4 activity summaries so you can see which concern areas are appearing most often by class and across the campus.<br><br>"
+        )
     body_email = (
         f"Hi {principal_display_name},<br><br>"
         "Please see the attached spreadsheet and the following summary table.<br><br>"
+        f"{k4_note}"
         "Can you please meet with these teachers individually so we can support these students and retain them for our campus?<br><br>"
         f"{table_html}<br><br>"
         "Sincerely,<br>"

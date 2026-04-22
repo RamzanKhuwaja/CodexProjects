@@ -11,18 +11,32 @@
 ## Current Position
 
 **Status:** Active.
-**Last session:** 2026-04-20 — validated the VAU supervised pipeline end to end on fresh exports, completed both test-send and production runs for week 30, and resent the duplicate-removal email to the office in production mode.
-**Next step:** Before the next grade-driven review or pipeline run, confirm which Brightspace/student-grade column is currently being used; then decide whether to clean the VAU duplicate exports or proceed to an MAE test-send pass for the shared principal-summary flow.
+**Last session:** 2026-04-22 — confirmed the overall grade source as Brightspace calculated-final numerator/denominator, implemented K-4 activity-detail reporting for struggling-student teacher/principal outputs, and sent VAU test emails for review.
+**Next step:** Run an MAE test-send pass for struggling-students and principal-summary with the new K-4 activity detail, then decide whether any wording or activity-bucket label adjustments are needed before the next live VAU send.
 
 ## Open Items
 
-- Run an MAE test-send pass for the principal-summary step so both campuses are visually confirmed under the new shared formatting.
-- Confirm which Brightspace/student-grade column the current pipeline logic is using before relying on future grade-based outputs.
+- Run an MAE test-send pass for struggling-students and principal-summary so both campuses are validated with the new K-4 activity-detail flow.
 - Decide whether to clean the VAU duplicate exports now that the live run has succeeded but the duplicate-office warning still fires.
+- Decide whether any K-4 activity bucket names or teacher/principal wording should be refined before the next live send.
 - Decide whether to persist per-run history so future teacher and principal summaries can compare new results to prior runs.
 - Add regression tests around the HTML and CSV parsers using anonymized fixtures when the workflow is stable enough.
 
 ## Session Log
+
+### Session 6 — 2026-04-22
+
+**Focus:** Confirm the real Brightspace cumulative-grade source, implement K-4 activity-level detail for struggling-student reporting, and validate the result with VAU test sends.
+- Confirmed the current overall grade logic uses `Calculated Final Grade Numerator` and `Calculated Final Grade Denominator`, not `Calculated Final Grade Scheme Symbol`, for struggling-student filtering and related grade-driven outputs.
+- Implemented K-4 activity-detail extraction from Brightspace subtotal numerator/denominator columns, normalized them into reporting buckets, and kept the overall `Final Grade` calculation unchanged.
+- Extended the struggling-students workbook to enrich `Details` with K-4 concern fields and add `K4_Student_Activity_Details`, `K4_Class_Activity_Summary`, and `K4_Campus_Activity_Summary` sheets when K-4 flagged students are present.
+- Updated the VAU and MAE teacher struggling-student email flows so K-4 teachers receive per-student activity detail directly in the email body.
+- Added a principal-summary note so the attached workbook explicitly calls out the presence of K-4 activity summaries when they exist.
+- Verified the implementation with compile checks, an in-memory VAU smoke test, and a temporary workbook export smoke test.
+- Opened Outlook manually and sent VAU teacher test emails plus the VAU principal test email to the test recipient, with the updated workbook generated at `Ready For Printing/VAU/VAU_StrugglingStudents-April 22, 2026.xlsx`.
+- Captured user feedback that the K-4 reporting direction looks correct, with any remaining refinement expected to be wording or bucket-label tuning rather than logic changes.
+
+**Next:** Run an MAE test-send pass for struggling-students and principal-summary with the new K-4 detail, then adjust wording or activity-bucket labels only if the reviewed VAU output suggests it.
 
 ### Session 5 — 2026-04-20
 
@@ -72,13 +86,3 @@
 - Updated path-sensitive project-root logic so the scripts resolve files from the new folder layout.
 
 **Next:** Verify the moved project from its new workspace path, then remove the original folder once the verification passes.
-
-### Session 2 — 2025-09-18
-
-**Focus:** Parser hardening and wrapper stabilization.
-- Hardened `Common/my_utils.py` with new helper utilities such as `warn_once`, `parse_datetime`, and more tolerant column detection.
-- Reworked class-list, attendance, and grades ingestion to validate files, normalize identifiers, and emit warnings instead of crashing.
-- Upgraded student-map generation and campus entry scripts with early exits and more consistent error handling.
-- Verified the codebase compiles via `python -m compileall`.
-
-**Next:** Run pipelines against fresh exports and watch for warnings caused by changing Brightspace fields.

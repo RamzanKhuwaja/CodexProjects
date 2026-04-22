@@ -32,6 +32,8 @@ def email_struggling_students_to_stakeholders(df_struggling_students) -> bool:
         print('INFO: SEND_EMAIL disabled; skipping struggling student emails.')
         return True
 
+    k4_details = utils.build_k4_activity_details(CAMPUS, df_struggling_students)
+
     missing_email_rows = df_struggling_students['Teacher Email'].isna() | (
         df_struggling_students['Teacher Email'].astype(str).str.strip() == ''
     )
@@ -78,12 +80,21 @@ def email_struggling_students_to_stakeholders(df_struggling_students) -> bool:
             title='Students requiring intervention',
             subtitle='These learners currently have cumulative grades below the campus threshold.',
         )
+        k4_html = utils.build_teacher_k4_activity_email_html(df_teacher, k4_details)
+        k4_blurb = ""
+        if k4_html:
+            k4_blurb = (
+                "For K-4 students, the activity details below show which areas are contributing most to the current grade.<br><br>"
+            )
         body_email = (
             f"Hello {teacher_name},<br><br>"
             "The students below currently have cumulative grades below the campus threshold.<br><br>"
             "Please review their progress and provide any appropriate academic support or follow-up.<br><br>"
             "Angela will follow up with teachers as needed regarding student performance and next steps.<br><br>"
             f"{table_html}<br><br>"
+            f"{k4_blurb}"
+            f"{k4_html}"
+            "<br><br>"
             "Sincerely,<br>"
             "Ramzan Khuwaja"
         )

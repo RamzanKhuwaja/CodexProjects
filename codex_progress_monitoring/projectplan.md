@@ -90,10 +90,20 @@
 ## Decision Log
 | Date | Decision | Context / Link |
 | --- | --- | --- |
-| _TBD_ | _Add entries as decisions are made._ | |
+| 2026-04-22 | Overall grade-driven reporting remains based on `Calculated Final Grade Numerator` / `Calculated Final Grade Denominator`, not `Calculated Final Grade Scheme Symbol`. | K-4 reporting implementation session |
+| 2026-04-22 | K-4 struggling-student reporting adds normalized activity-detail summaries for teachers and principal outputs while keeping the existing overall final-grade trigger unchanged. | K-4 reporting implementation session |
 
 ## Session Journal
 _Add a new entry per session (reverse chronological)._
+
+### 2026-04-22 — K-4 Activity Reporting And VAU Test Sends
+- Confirmed that the current overall grade logic uses Brightspace `Calculated Final Grade Numerator` and `Calculated Final Grade Denominator`, not `Calculated Final Grade Scheme Symbol`.
+- Designed and implemented K-4 activity-detail reporting for struggling-student outputs by extracting subtotal numerator/denominator categories, normalizing them into stable activity buckets, and leaving the overall `Final Grade` logic unchanged.
+- Extended the struggling-students workbook to enrich `Details` with K-4 concern fields and add `K4_Student_Activity_Details`, `K4_Class_Activity_Summary`, and `K4_Campus_Activity_Summary` sheets.
+- Updated teacher-facing struggling-student emails so K-4 teachers receive per-student activity detail directly in the email body, and updated the principal-summary email to call out the new K-4 workbook summaries.
+- Verified the implementation with compile checks, an in-memory VAU smoke test, and a temporary workbook export smoke test before sending emails.
+- Sent VAU struggling-student teacher test emails and the VAU principal test email to the configured test recipient after Outlook was opened manually, and generated the reviewed workbook at `Ready For Printing/VAU/VAU_StrugglingStudents-April 22, 2026.xlsx`.
+- Captured positive user review of the new K-4 reporting direction, with any follow-up expected to be wording or bucket-label tuning rather than structural changes.
 
 ### 2026-04-20 — VAU Pipeline Validation And Live Send
 - Ran the supervised VAU pipeline on fresh April 20, 2026 exports after confirming the missing Grade 8 grades export for class `SOMp2508Su1130ETVAU` (`ou=25497`) had been downloaded.
@@ -118,9 +128,9 @@ _Add a new entry per session (reverse chronological)._
 
 ## Next Session Checklist
 - Read the latest Session Journal entry.
-- Confirm which Brightspace/student-grade column is currently being used before relying on grade-driven outputs.
+- Run an MAE test-send pass for struggling-students and principal-summary so the new K-4 activity detail is validated on both campuses.
+- Review whether any K-4 activity bucket names or teacher/principal wording should be adjusted based on the VAU test-send output.
 - Review the VAU duplicate-export clutter and decide whether to clean older downloads before the next live run.
-- Run an MAE test-send pass for the shared principal-summary step so both campuses are confirmed under the new flow.
 - Confirm Outlook is already open before any email-capable test or live send.
 - After each work session, append a new entry under "Session Journal" and refresh the checklist so the next pickup is seamless.
 

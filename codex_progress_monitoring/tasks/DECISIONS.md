@@ -12,6 +12,8 @@
 
 - Existing operational folders remain named `Data/`, `Ready For Printing/`, `For Data Entry Person/`, and `WeekToWeek/`.
 - `Ready For Printing/` remains the active report output location for the existing workflow.
+- Overall grade-driven reporting logic uses Brightspace `Calculated Final Grade Numerator` and `Calculated Final Grade Denominator`, not `Calculated Final Grade Scheme Symbol`.
+- K-4 struggling-student reporting keeps the same overall final-grade trigger and supplements teacher/principal outputs with normalized activity-detail summaries derived from Brightspace subtotal numerator/denominator fields.
 
 ## Workflow Automation
 
