@@ -11,18 +11,30 @@
 ## Current Position
 
 **Status:** Active.
-**Last session:** 2026-04-22 — confirmed the overall grade source as Brightspace calculated-final numerator/denominator, implemented K-4 activity-detail reporting for struggling-student teacher/principal outputs, and sent VAU test emails for review.
-**Next step:** Run an MAE test-send pass for struggling-students and principal-summary with the new K-4 activity detail, then decide whether any wording or activity-bucket label adjustments are needed before the next live VAU send.
+**Last session:** 2026-04-28 — ran the MAE supervised pipeline for week 31 in both test-send and production modes, validated the new K-4 struggling-student output on MAE, and sent the live MAE teacher and principal emails.
+**Next step:** Review whether any K-4 wording or activity-bucket labels should be refined after the MAE validation, then decide whether to clean the recurring duplicate MAE and VAU Brightspace exports before the next live runs.
 
 ## Open Items
 
-- Run an MAE test-send pass for struggling-students and principal-summary so both campuses are validated with the new K-4 activity-detail flow.
+- Decide whether to clean the MAE duplicate exports now that the live run has succeeded but duplicate warnings still fire for students `42457`, `44458`, and `45962`.
 - Decide whether to clean the VAU duplicate exports now that the live run has succeeded but the duplicate-office warning still fires.
-- Decide whether any K-4 activity bucket names or teacher/principal wording should be refined before the next live send.
+- Decide whether any K-4 activity bucket names or teacher/principal wording should be refined now that both campuses have been validated.
 - Decide whether to persist per-run history so future teacher and principal summaries can compare new results to prior runs.
 - Add regression tests around the HTML and CSV parsers using anonymized fixtures when the workflow is stable enough.
 
 ## Session Log
+
+### Session 7 — 2026-04-28
+
+**Focus:** Validate the MAE K-4 struggling-student flow in test mode, then complete the approved live send for week 31.
+- Ran `MAE_0_CheckDownloadedFiles.py` successfully and confirmed all 68 MAE attendance, class-list, and grades exports were present before starting the pipeline.
+- Ran the supervised MAE `main` flow in `test-send` mode for week 31 after Outlook was opened manually, and confirmed the missing-attendance, struggling-students, and principal-summary steps all completed to the test recipient.
+- Observed recurring MAE duplicate-export warnings for students `42457`, `44458`, and `45962` across class-list, attendance, and grades inputs; the pipeline continued by policy.
+- Regenerated `Common/MAEStudentMap2025-26.csv` and confirmed `Attendance (%)` is still missing for those same 3 duplicate-linked students.
+- Generated the MAE struggling-students workbook at `Ready For Printing/MAE/MAE_StrugglingStudents-April 28, 2026.xlsx` during both the test and production runs.
+- Confirmed the production runner requires the explicit `--confirm-live-send` flag, then ran the MAE `main` flow in `production` mode for week 31 and sent the live teacher emails plus the principal summary to Lisa Chiu with CC to `markhameast@spiritofmath.com`.
+
+**Next:** Review whether any K-4 wording or activity-bucket labels need refinement after the MAE validation, then decide whether to clean the recurring MAE and VAU duplicate exports before the next live runs.
 
 ### Session 6 — 2026-04-22
 
@@ -76,13 +88,3 @@
 - Captured the planned direction for future work: preserve manual MAE/VAU entry scripts, build a supervised runner above the existing code, never auto-start Outlook, pause on key failures, and support test-send before approved live-send.
 
 **Next:** Write the orchestration design spec and identify the minimum refactor needed to replace manual global toggles with run-time controls.
-
-### Session 1 — 2026-04-17
-
-**Focus:** Moved ProgressMonitoring into `CodexProjects` as `codex_progress_monitoring`.
-- Imported the existing code repository history into the workspace project folder.
-- Copied the surrounding project data folders (`Data`, `Ready For Printing`, `For Data Entry Person`, `WeekToWeek`) into the new project root.
-- Added template-style session, memory, and task management files without forcing a risky codebase reorganization.
-- Updated path-sensitive project-root logic so the scripts resolve files from the new folder layout.
-
-**Next:** Verify the moved project from its new workspace path, then remove the original folder once the verification passes.

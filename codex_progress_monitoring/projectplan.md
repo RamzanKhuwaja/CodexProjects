@@ -96,6 +96,13 @@
 ## Session Journal
 _Add a new entry per session (reverse chronological)._
 
+### 2026-04-28 — MAE Test And Production Week 31 Run
+- Ran `MAE_0_CheckDownloadedFiles.py` first and confirmed all 68 attendance, 68 class-list, and 68 grades exports were present for MAE.
+- Ran the supervised MAE `main` flow in `test-send` mode for week 31 after Outlook was opened manually and confirmed the missing-attendance, struggling-students, and principal-summary steps completed to the test recipient.
+- Confirmed the MAE K-4 struggling-student reporting path behaves correctly on real MAE data and regenerated `Ready For Printing/MAE/MAE_StrugglingStudents-April 28, 2026.xlsx`.
+- Observed duplicate-export warnings for students `42457`, `44458`, and `45962` across MAE class-list, attendance, and grades inputs; the pipeline continued by policy and `Attendance (%)` remained missing for those same 3 students in `Common/MAEStudentMap2025-26.csv`.
+- Attempted the MAE production run once, hit the expected live-send safeguard, then reran with explicit `--confirm-live-send` approval and completed the live teacher sends plus the principal summary to Lisa Chiu with CC to `markhameast@spiritofmath.com`.
+
 ### 2026-04-22 — K-4 Activity Reporting And VAU Test Sends
 - Confirmed that the current overall grade logic uses Brightspace `Calculated Final Grade Numerator` and `Calculated Final Grade Denominator`, not `Calculated Final Grade Scheme Symbol`.
 - Designed and implemented K-4 activity-detail reporting for struggling-student outputs by extracting subtotal numerator/denominator categories, normalizing them into stable activity buckets, and leaving the overall `Final Grade` logic unchanged.
@@ -128,8 +135,8 @@ _Add a new entry per session (reverse chronological)._
 
 ## Next Session Checklist
 - Read the latest Session Journal entry.
-- Run an MAE test-send pass for struggling-students and principal-summary so the new K-4 activity detail is validated on both campuses.
-- Review whether any K-4 activity bucket names or teacher/principal wording should be adjusted based on the VAU test-send output.
+- Review whether any K-4 activity bucket names or teacher/principal wording should be adjusted now that both campuses have been validated.
+- Review the MAE duplicate-export warnings for students `42457`, `44458`, and `45962` and decide whether to clean older MAE downloads before the next live run.
 - Review the VAU duplicate-export clutter and decide whether to clean older downloads before the next live run.
 - Confirm Outlook is already open before any email-capable test or live send.
 - After each work session, append a new entry under "Session Journal" and refresh the checklist so the next pickup is seamless.
