@@ -12,7 +12,7 @@ MEMORY
   tasks/ARCHIVE.md           Older session history
 
 SESSION PHRASES
-  "start session"            Reload project memory and resume from last recorded state
+  "start session"            Reload project memory, report state, then wait for the next instruction
   "end session"              Record the session, decisions, and next step
 
 ------------------------------------------------------------
@@ -20,21 +20,51 @@ SCRIPTS
 ------------------------------------------------------------
 
   pdf_to_md.py:
-    python scripts/pdf_to_md.py --input data/current/<file>.pdf --output output/<file>.md
+    python scripts/pdf_to_md.py --input data/current/<file>.pdf
+    python scripts/pdf_to_md.py --all
+    python scripts/pdf_to_md.py --input data/current/<file>.pdf --overwrite
+    python scripts/pdf_to_md.py --input data/current/<file>.pdf --ocr-mode auto
 
-  Output: output/<source-name>.md
+  Key behavior:
+    - Default mode is single-file only via --input
+    - Batch mode requires --all
+    - Existing generated book outputs are protected unless --overwrite is passed
+    - Stable book IDs come from data/metadata/books_manifest.csv
+    - Primary extraction uses PyMuPDF
+    - OCR prefers OCRmyPDF when Tesseract is available
+    - OCRmyPDF runs with the pypdfium rasterizer and optimization disabled, so Ghostscript is optional
+    - Fallback OCR uses PyMuPDF integrated OCR when Tesseract is available
+    - Arabic-heavy pages are re-OCRed directly with Tesseract to recover logical-order text instead of relying on the PDF text layer
+    - Passage metadata now records coarse OCR confidence and weak-section review notes
+
+  Generated outputs:
+    - output/raw_text/<book_id>.txt
+    - output/book_markdown/<book_id>.md
+    - output/passage_markdown/<book_id>/<passage>.md
+    - output/metadata/books.csv
+    - output/metadata/passages.csv
+    - output/review_logs/<book_id>.md
+    - output/qc/<book_id>.json
+    - output/qc/<book_id>_pages.csv
+    - output/review_images/<book_id>/page_<nnn>.png
 
 ------------------------------------------------------------
-DATA FILES (data/current/)
+DATA FILES
 ------------------------------------------------------------
 
-  Source PDF files to convert
+  data/current/                    Source PDF files to convert
+  data/metadata/books_manifest.csv Manual book-ID manifest
 
 ------------------------------------------------------------
 OUTPUT
 ------------------------------------------------------------
 
-  Markdown files generated from the source PDFs
+  output/raw_text/                 Raw extracted text with page markers
+  output/book_markdown/            Cleaned book-level Markdown
+  output/metadata/                 books.csv and passages.csv
+  output/review_logs/              QC and review logs per book
+  output/qc/                       Machine-readable QC summaries and page-level flags
+  output/review_images/            PNG exports for pages marked for manual review
 
 ------------------------------------------------------------
 KEY NUMBERS / REFERENCE VALUES
@@ -46,7 +76,7 @@ KEY NUMBERS / REFERENCE VALUES
 TRIGGER PHRASES
 ------------------------------------------------------------
 
-  "start session"      - Reload project context from memory and task files
+  "start session"      - Reload project context, report status, and wait for the next instruction
   "end session"        - Save the project session state for the next visit
   "Perform task #1"    - Convert PDFs in data/current into Markdown output
 
@@ -54,8 +84,11 @@ TRIGGER PHRASES
 NOTES
 ------------------------------------------------------------
 
-  - Run all scripts from the project root folder
-  - Put raw PDFs in data/current and keep generated Markdown in output
+  - Run scripts from the project root folder
+  - Put source PDFs in data/current
+  - Book IDs are assigned and persisted in data/metadata/books_manifest.csv
+  - This machine now has a user-local Tesseract install under ~/scoop/apps/tesseract/current with eng and ara language data
+  - Ghostscript is optional for the current OCR path and is not required for OCRmyPDF here
   - Use docs/Requirements.md as the project source of truth
 
 ============================================================

@@ -45,7 +45,8 @@ When Ramzan says `start session` for this project:
    - current project status
    - what was done last session
    - the next recorded step
-3. Then continue unless redirected.
+3. Ask what Ramzan wants to do next for this session.
+4. Wait for Ramzan's input before making code changes, running the task workflow, or continuing beyond session startup.
 
 When Ramzan says `end session` for this project:
 

@@ -1,0 +1,2 @@
+book_id,source_relpath,source_sha256,full_title,author,translator_editor,language,text_direction,normalization_level,notes
+B001,data/current/Nahj al-Balāghah.pdf,92e87b1f41aff9ca84897d52006c7b492e07546309dc42056b49064e2f475cff,,,,,,,Auto-created during first processing run.
