@@ -96,6 +96,14 @@
 ## Session Journal
 _Add a new entry per session (reverse chronological)._
 
+### 2026-05-13 — MAE Test And Production Week 33 Run
+- Ran `MAE_0_CheckDownloadedFiles.py` through the supervised `start` flow and confirmed all 68 attendance, 68 class-list, and 68 grades exports were present for MAE.
+- Ran the MAE supervised `main` flow in `test-send` mode for week 33; the first attempt stopped at the missing-attendance step because Outlook was not yet open, then the rerun completed successfully after Outlook was opened manually.
+- Observed recurring duplicate-export warnings in MAE class lists for Chen, Ethan; Leung, Lucas; Wang, Derek; and Wong, Nathan; the pipeline continued by policy and no attendance or grades duplicate warnings were raised.
+- Regenerated `Common/MAEStudentMap2025-26.csv` with 958 students and observed that `Attendance (%)` remained missing for students `44468` and `45288`.
+- Generated `Ready For Printing/MAE/MAE_StrugglingStudents-May 13, 2026.xlsx` and confirmed the struggling-students summary totals 58 flagged students for the week 33 run.
+- Completed the MAE production run with explicit `--confirm-live-send` approval and sent the live teacher emails plus the principal summary to Lisa Chiu with CC to `markhameast@spiritofmath.com`.
+
 ### 2026-04-28 — MAE Test And Production Week 31 Run
 - Ran `MAE_0_CheckDownloadedFiles.py` first and confirmed all 68 attendance, 68 class-list, and 68 grades exports were present for MAE.
 - Ran the supervised MAE `main` flow in `test-send` mode for week 31 after Outlook was opened manually and confirmed the missing-attendance, struggling-students, and principal-summary steps completed to the test recipient.
@@ -136,7 +144,8 @@ _Add a new entry per session (reverse chronological)._
 ## Next Session Checklist
 - Read the latest Session Journal entry.
 - Review whether any K-4 activity bucket names or teacher/principal wording should be adjusted now that both campuses have been validated.
-- Review the MAE duplicate-export warnings for students `42457`, `44458`, and `45962` and decide whether to clean older MAE downloads before the next live run.
+- Review the MAE duplicate-export warnings for Chen, Ethan; Leung, Lucas; Wang, Derek; and Wong, Nathan and decide whether to clean older MAE class-list downloads before the next live run.
+- Review why `Attendance (%)` is still missing for students `44468` and `45288` in the refreshed MAE student map.
 - Review the VAU duplicate-export clutter and decide whether to clean older downloads before the next live run.
 - Confirm Outlook is already open before any email-capable test or live send.
 - After each work session, append a new entry under "Session Journal" and refresh the checklist so the next pickup is seamless.

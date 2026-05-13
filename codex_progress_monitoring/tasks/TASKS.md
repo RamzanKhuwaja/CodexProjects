@@ -11,11 +11,13 @@
 ## Current Position
 
 **Status:** Active.
-**Last session:** 2026-04-28 — ran the MAE supervised pipeline for week 31 in both test-send and production modes, validated the new K-4 struggling-student output on MAE, and sent the live MAE teacher and principal emails.
-**Next step:** Review whether any K-4 wording or activity-bucket labels should be refined after the MAE validation, then decide whether to clean the recurring duplicate MAE and VAU Brightspace exports before the next live runs.
+**Last session:** 2026-05-13 — ran the MAE supervised pipeline for week 33 in both test-send and production modes on fresh MAE exports, regenerated the student map and struggling-students workbook, and sent the live MAE teacher and principal emails.
+**Next step:** Review the recurring MAE class-list duplicate findings for Chen, Ethan; Leung, Lucas; Wang, Derek; and Wong, Nathan, then decide whether to clean older MAE Brightspace exports before the next live run.
 
 ## Open Items
 
+- Review the recurring MAE class-list duplicate findings for Chen, Ethan; Leung, Lucas; Wang, Derek; and Wong, Nathan, and decide whether older MAE class-list exports should be cleaned before the next run.
+- Review why `Attendance (%)` is still missing for students `44468` and `45288` in the refreshed MAE student map.
 - Decide whether to clean the MAE duplicate exports now that the live run has succeeded but duplicate warnings still fire for students `42457`, `44458`, and `45962`.
 - Decide whether to clean the VAU duplicate exports now that the live run has succeeded but the duplicate-office warning still fires.
 - Decide whether any K-4 activity bucket names or teacher/principal wording should be refined now that both campuses have been validated.
@@ -23,6 +25,18 @@
 - Add regression tests around the HTML and CSV parsers using anonymized fixtures when the workflow is stable enough.
 
 ## Session Log
+
+### Session 8 — 2026-05-13
+
+**Focus:** Run the MAE supervised pipeline on the newly downloaded MAE exports for week 33 and complete the approved live send.
+- Ran `MAE` step `0_CheckDownloadedFiles` through the supervised `start` flow and confirmed all 68 attendance, 68 class-list, and 68 grades exports were present before the main run.
+- Ran the MAE `main` flow in `test-send` mode for week 33; the first attempt stopped at step `3` because Outlook was not open, then the rerun completed successfully once Outlook was opened manually.
+- Observed recurring MAE class-list duplicate findings for Chen, Ethan; Leung, Lucas; Wang, Derek; and Wong, Nathan during step `1`; the pipeline continued by policy.
+- Regenerated `Common/MAEStudentMap2025-26.csv` with 958 students and confirmed `Attendance (%)` is still missing for students `44468` and `45288`.
+- Generated the workbook `Ready For Printing/MAE/MAE_StrugglingStudents-May 13, 2026.xlsx` and confirmed the week 33 struggling-students summary totals 58 flagged students.
+- Ran the MAE `main` flow in `production` mode for week 33 with explicit live-send confirmation and sent the live missing-attendance emails, struggling-students emails, and principal summary to Lisa Chiu with CC to `markhameast@spiritofmath.com`.
+
+**Next:** Review the recurring MAE duplicate findings and the two missing attendance-percentage rows, then decide whether to clean older MAE exports before the next live run.
 
 ### Session 7 — 2026-04-28
 
@@ -77,14 +91,3 @@
   - MAE: Lisa Chiu (`lisachiu@spiritofmath.com`), CC `markhameast@spiritofmath.com`
 
 **Next:** Use fresh VAU exports tomorrow to run the supervised flow from `run pipeline for VAU`, confirm the week number after step `0`, and validate the updated main pipeline on current data.
-
-### Session 3 — 2026-04-17
-
-**Focus:** Resume the project, validate the moved workspace, and capture automation requirements.
-- Read the project operating files and resumed from the recorded next step.
-- Verified recent Brightspace exports exist on disk: VAU dated 2026-03-29 and MAE dated 2026-04-14.
-- Ran `VAU_1_CheckAllDups.py` and `MAE_1_CheckAllDups.py` successfully from the new project root, confirming the moved path logic works.
-- Observed real duplicate-export findings in both campuses and Outlook-not-running warnings on notification steps, so no deeper report pipeline was run.
-- Captured the planned direction for future work: preserve manual MAE/VAU entry scripts, build a supervised runner above the existing code, never auto-start Outlook, pause on key failures, and support test-send before approved live-send.
-
-**Next:** Write the orchestration design spec and identify the minimum refactor needed to replace manual global toggles with run-time controls.
